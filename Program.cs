@@ -195,98 +195,6 @@ namespace EnvanterSayimApp
             }
         }
 
-        public static string CreateSampleProductPhotoBase64(Color bgColor, Color accentColor, string shortCode, string label)
-        {
-            using (Bitmap bmp = new Bitmap(320, 320))
-            {
-                using (Graphics g = Graphics.FromImage(bmp))
-                {
-                    g.SmoothingMode = SmoothingMode.AntiAlias;
-                    g.Clear(bgColor);
-
-                    using (SolidBrush circleBrush = new SolidBrush(Color.FromArgb(40, accentColor)))
-                    {
-                        g.FillEllipse(circleBrush, 60, 35, 200, 200);
-                    }
-
-                    using (Font codeFont = new Font("Segoe UI", 42, FontStyle.Bold))
-                    using (SolidBrush accentBrush = new SolidBrush(accentColor))
-                    {
-                        SizeF codeSize = g.MeasureString(shortCode, codeFont);
-                        g.DrawString(shortCode, codeFont, accentBrush, (320 - codeSize.Width) / 2f, 100);
-                    }
-
-                    using (Font labelFont = new Font("Segoe UI", 15, FontStyle.Bold))
-                    using (SolidBrush textBrush = new SolidBrush(Color.FromArgb(30, 41, 59)))
-                    {
-                        SizeF lblSize = g.MeasureString(label, labelFont);
-                        g.DrawString(label, labelFont, textBrush, (320 - lblSize.Width) / 2f, 250);
-                    }
-                }
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    bmp.Save(ms, ImageFormat.Png);
-                    return Convert.ToBase64String(ms.ToArray());
-                }
-            }
-        }
-
-        public static InventoryStore CreateDemoStore(bool darkMode = true)
-        {
-            var store = new InventoryStore { ViewMode = "list", DarkMode = darkMode };
-
-            var p1 = new ProductItem
-            {
-                Id = "p_1",
-                Name = "Ofis Çalışma Sandalyesi",
-                PhotoBase64 = CreateSampleProductPhotoBase64(Color.FromArgb(224, 231, 255), Color.FromArgb(79, 70, 229), "SN", "Çalışma Sandalyesi")
-            };
-            var p2 = new ProductItem
-            {
-                Id = "p_2",
-                Name = "27\" Dell IPS Monitör",
-                PhotoBase64 = CreateSampleProductPhotoBase64(Color.FromArgb(220, 252, 231), Color.FromArgb(22, 163, 74), "MN", "27\" IPS Monitör")
-            };
-            var p3 = new ProductItem
-            {
-                Id = "p_3",
-                Name = "Kablosuz Klavye & Mouse Seti",
-                PhotoBase64 = CreateSampleProductPhotoBase64(Color.FromArgb(254, 243, 199), Color.FromArgb(217, 119, 6), "KM", "Klavye & Mouse")
-            };
-            var p4 = new ProductItem
-            {
-                Id = "p_4",
-                Name = "HP Lazer Yazıcı",
-                PhotoBase64 = CreateSampleProductPhotoBase64(Color.FromArgb(250, 232, 255), Color.FromArgb(147, 51, 234), "YZ", "Lazer Yazıcı")
-            };
-            var p5 = new ProductItem
-            {
-                Id = "p_5",
-                Name = "Çalışma Masası (160x80)",
-                PhotoBase64 = CreateSampleProductPhotoBase64(Color.FromArgb(255, 237, 213), Color.FromArgb(234, 88, 12), "MS", "Çalışma Masası")
-            };
-
-            store.Products.AddRange(new[] { p1, p2, p3, p4, p5 });
-
-            var r1 = new RoomData { Id = "r_1", Name = "Yazılım Ofisi (Oda 101)", Note = "1. Kat Sağ Koridor" };
-            r1.SetQuantity("p_1", 12);
-            r1.SetQuantity("p_2", 14);
-            r1.SetQuantity("p_3", 12);
-            r1.SetQuantity("p_5", 12);
-
-            var r2 = new RoomData { Id = "r_2", Name = "Ana Depo", Note = "Zemin Kat Arka Bölüm" };
-            r2.SetQuantity("p_1", 5);
-            r2.SetQuantity("p_2", 3);
-            r2.SetQuantity("p_4", 2);
-
-            var r3 = new RoomData { Id = "r_3", Name = "Toplantı Odası", Note = "2. Kat" };
-            r3.SetQuantity("p_1", 8);
-            r3.SetQuantity("p_2", 1);
-
-            store.Rooms.AddRange(new[] { r1, r2, r3 });
-            return store;
-        }
-
         public static void SaveStore(InventoryStore store)
         {
             try
@@ -319,11 +227,9 @@ namespace EnvanterSayimApp
             }
             catch
             {
-                // Bozuk dosya durumunda varsayılan yükle
+                // Bozuk dosya durumunda temiz başlat
             }
-            var demo = CreateDemoStore(true);
-            SaveStore(demo);
-            return demo;
+            return new InventoryStore { ViewMode = "list", DarkMode = true };
         }
     }
 
@@ -359,7 +265,6 @@ namespace EnvanterSayimApp
         private Button btnTabSummary;
         private Button btnThemeToggle;
         private Button btnExportCsv;
-        private Button btnDemo;
         private Button btnReset;
 
         private Panel sidebarPanel;
@@ -462,9 +367,6 @@ namespace EnvanterSayimApp
             btnReset = CreateActionButton("Sıfırla", ColDangerBg, ColDanger, 80);
             btnReset.Click += (s, e) => ResetAllData();
 
-            btnDemo = CreateActionButton("Örnek Veri", ColSurfaceAlt, ColTextDark, 95);
-            btnDemo.Click += (s, e) => LoadDemoData();
-
             btnExportCsv = CreateActionButton("📥 Excel İndir", Color.FromArgb(6, 78, 59), Color.FromArgb(110, 231, 183), 125);
             btnExportCsv.Click += (s, e) => ExportToCsv();
 
@@ -472,7 +374,6 @@ namespace EnvanterSayimApp
             btnThemeToggle.Click += (s, e) => ToggleDarkMode();
 
             rightActions.Controls.Add(btnReset);
-            rightActions.Controls.Add(btnDemo);
             rightActions.Controls.Add(btnExportCsv);
             rightActions.Controls.Add(btnThemeToggle);
             topBar.Controls.Add(rightActions);
@@ -711,9 +612,6 @@ namespace EnvanterSayimApp
 
             btnExportCsv.BackColor = store.DarkMode ? Color.FromArgb(6, 78, 59) : Color.FromArgb(209, 250, 229);
             btnExportCsv.ForeColor = store.DarkMode ? Color.FromArgb(110, 231, 183) : Color.FromArgb(6, 95, 70);
-
-            btnDemo.BackColor = ColSurfaceAlt;
-            btnDemo.ForeColor = ColTextDark;
 
             btnReset.BackColor = ColDangerBg;
             btnReset.ForeColor = ColDanger;
@@ -1993,20 +1891,6 @@ namespace EnvanterSayimApp
         private string EscapeCsv(string val)
         {
             return (val ?? "").Replace("\"", "\"\"");
-        }
-
-        private void LoadDemoData()
-        {
-            var res = MessageBox.Show("Örnek oda ve fotoğraflı ürünleri yüklemek istiyor musunuz?", "Örnek Veri", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-            if (res == DialogResult.Yes)
-            {
-                bool keepDark = store.DarkMode;
-                AppHelper.ClearImageCache();
-                store = AppHelper.CreateDemoStore(keepDark);
-                currentRoomId = store.Rooms.FirstOrDefault()?.Id;
-                AppHelper.SaveStore(store);
-                RefreshAll();
-            }
         }
 
         private void ResetAllData()
