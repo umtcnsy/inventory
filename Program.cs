@@ -177,6 +177,62 @@ namespace EnvanterSayimApp
             }
         }
 
+        // ARAYÜZ ARKA PLAN, KART, PANEL VE KENARLIK RENKLERİ (SEÇİLEN İKİLİ TEMAYA GÖRE KOMPLE DEĞİŞİR)
+        public static Color GetBgColor(int themeIdx, bool dark)
+        {
+            switch (themeIdx)
+            {
+                case 1: return dark ? Color.FromArgb(6, 28, 22) : Color.FromArgb(209, 250, 229);     // Zümrüt & Altın Arka Plan
+                case 2: return dark ? Color.FromArgb(31, 9, 19) : Color.FromArgb(255, 228, 230);     // Kızıl & Turuncu Arka Plan
+                case 3: return dark ? Color.FromArgb(20, 10, 38) : Color.FromArgb(237, 233, 254);    // Mor & Pembe Arka Plan
+                default: return dark ? Color.FromArgb(7, 22, 38) : Color.FromArgb(224, 242, 254);    // Okyanus & Turkuaz Arka Plan
+            }
+        }
+
+        public static Color GetCardColor(int themeIdx, bool dark)
+        {
+            switch (themeIdx)
+            {
+                case 1: return dark ? Color.FromArgb(12, 48, 38) : Color.FromArgb(255, 251, 235);    // Zümrüt & Altın Kart/ÜstBar
+                case 2: return dark ? Color.FromArgb(52, 16, 31) : Color.FromArgb(255, 247, 237);    // Kızıl & Turuncu Kart/ÜstBar
+                case 3: return dark ? Color.FromArgb(37, 18, 69) : Color.FromArgb(253, 242, 248);    // Mor & Pembe Kart/ÜstBar
+                default: return dark ? Color.FromArgb(14, 39, 64) : Color.FromArgb(240, 253, 250);   // Okyanus & Turkuaz Kart/ÜstBar
+            }
+        }
+
+        public static Color GetSurfaceAltColor(int themeIdx, bool dark)
+        {
+            switch (themeIdx)
+            {
+                case 1: return dark ? Color.FromArgb(21, 74, 58) : Color.FromArgb(167, 243, 208);
+                case 2: return dark ? Color.FromArgb(82, 26, 48) : Color.FromArgb(254, 205, 211);
+                case 3: return dark ? Color.FromArgb(58, 30, 107) : Color.FromArgb(221, 214, 254);
+                default: return dark ? Color.FromArgb(23, 61, 97) : Color.FromArgb(186, 230, 253);
+            }
+        }
+
+        public static Color GetInputBgColor(int themeIdx, bool dark)
+        {
+            switch (themeIdx)
+            {
+                case 1: return dark ? Color.FromArgb(8, 36, 28) : Color.White;
+                case 2: return dark ? Color.FromArgb(38, 11, 23) : Color.White;
+                case 3: return dark ? Color.FromArgb(26, 13, 48) : Color.White;
+                default: return dark ? Color.FromArgb(9, 28, 48) : Color.White;
+            }
+        }
+
+        public static Color GetBorderColor(int themeIdx, bool dark)
+        {
+            switch (themeIdx)
+            {
+                case 1: return dark ? Color.FromArgb(34, 115, 89) : Color.FromArgb(110, 231, 183);
+                case 2: return dark ? Color.FromArgb(128, 41, 74) : Color.FromArgb(253, 164, 175);
+                case 3: return dark ? Color.FromArgb(91, 48, 166) : Color.FromArgb(196, 181, 253);
+                default: return dark ? Color.FromArgb(36, 90, 140) : Color.FromArgb(125, 211, 252);
+            }
+        }
+
         private static readonly Dictionary<string, Image> ImageCache = new Dictionary<string, Image>();
 
         public static string DataFilePath
@@ -317,19 +373,19 @@ namespace EnvanterSayimApp
         private bool IsEN => store.Language == "en";
         private string T(string tr, string en) => IsEN ? en : tr;
 
-        // Dinamik İkili Renk & Tema Paleti
+        // Dinamik İkili Renk & Tema Paleti (Arayüzün tamamını seçilen ikili renge göre boyar)
         private Color ColPrimary => AppHelper.GetPrimaryColor(store.ColorTheme, store.DarkMode);
         private Color ColSecondary => AppHelper.GetSecondaryColor(store.ColorTheme, store.DarkMode);
         private Color ColPrimarySoft => AppHelper.GetPrimarySoftBg(store.ColorTheme, store.DarkMode);
         private Color ColSecondarySoft => AppHelper.GetSecondarySoftBg(store.ColorTheme, store.DarkMode);
 
-        private Color ColBg => store.DarkMode ? Color.FromArgb(15, 23, 42) : Color.FromArgb(241, 245, 249);
-        private Color ColCard => store.DarkMode ? Color.FromArgb(30, 41, 59) : Color.White;
-        private Color ColSurfaceAlt => store.DarkMode ? Color.FromArgb(51, 65, 85) : Color.FromArgb(226, 232, 240);
-        private Color ColInputBg => store.DarkMode ? Color.FromArgb(15, 23, 42) : Color.White;
+        private Color ColBg => AppHelper.GetBgColor(store.ColorTheme, store.DarkMode);
+        private Color ColCard => AppHelper.GetCardColor(store.ColorTheme, store.DarkMode);
+        private Color ColSurfaceAlt => AppHelper.GetSurfaceAltColor(store.ColorTheme, store.DarkMode);
+        private Color ColInputBg => AppHelper.GetInputBgColor(store.ColorTheme, store.DarkMode);
         private Color ColTextDark => store.DarkMode ? Color.FromArgb(248, 250, 252) : Color.FromArgb(15, 23, 42);
-        private Color ColTextMuted => store.DarkMode ? Color.FromArgb(148, 163, 184) : Color.FromArgb(100, 116, 139);
-        private Color ColBorder => store.DarkMode ? Color.FromArgb(51, 65, 85) : Color.FromArgb(203, 213, 225);
+        private Color ColTextMuted => store.DarkMode ? Color.FromArgb(175, 190, 210) : Color.FromArgb(71, 85, 105);
+        private Color ColBorder => AppHelper.GetBorderColor(store.ColorTheme, store.DarkMode);
         private Color ColDanger => store.DarkMode ? Color.FromArgb(251, 113, 133) : Color.FromArgb(225, 29, 72);
         private Color ColDangerBg => store.DarkMode ? Color.FromArgb(76, 5, 25) : Color.FromArgb(254, 226, 226);
 
@@ -819,10 +875,10 @@ namespace EnvanterSayimApp
 
                 string[] themeNames = new[]
                 {
-                    T("1) 🔵🟢 Okyanus Mavisi & Turkuaz", "1) 🔵🟢 Ocean Blue & Teal"),
-                    T("2) 🟢🟡 Zümrüt Yeşili & Altın Kehribar", "2) 🟢🟡 Emerald Green & Amber Gold"),
-                    T("3) 🔴🟠 Kızıl Rose & Gün Batımı Turuncu", "3) 🔴🟠 Crimson Rose & Sunset Orange"),
-                    T("4) 🟣🩷 Kraliyet Moru & Fuşya Pembe", "4) 🟣🩷 Royal Purple & Fuchsia Pink")
+                    T("1) Okyanus Mavisi & Turkuaz", "1) Ocean Blue & Teal"),
+                    T("2) Zümrüt Yeşili & Altın Kehribar", "2) Emerald Green & Amber Gold"),
+                    T("3) Kızıl Rose & Gün Batımı Turuncu", "3) Crimson Rose & Sunset Orange"),
+                    T("4) Kraliyet Moru & Fuşya Pembe", "4) Royal Purple & Fuchsia Pink")
                 };
 
                 dlg.Controls.AddRange(new Control[] { lblLang, btnTR, btnEN, lblMode, btnDark, btnLight, lblColors });
@@ -833,6 +889,7 @@ namespace EnvanterSayimApp
                     bool isCurrent = store.ColorTheme == idx;
                     Color pCol = AppHelper.GetPrimaryColor(idx, store.DarkMode);
                     Color sCol = AppHelper.GetSecondaryColor(idx, store.DarkMode);
+                    Color cardCol = AppHelper.GetCardColor(idx, store.DarkMode);
 
                     Button btnTheme = new Button
                     {
@@ -842,12 +899,12 @@ namespace EnvanterSayimApp
                         TextAlign = ContentAlignment.MiddleLeft,
                         Padding = new Padding(12, 0, 0, 0),
                         FlatStyle = FlatStyle.Flat,
-                        BackColor = isCurrent ? pCol : ColSurfaceAlt,
+                        BackColor = isCurrent ? pCol : cardCol,
                         ForeColor = isCurrent ? Color.White : ColTextDark,
                         Font = new Font("Segoe UI", 9.2f, FontStyle.Bold),
                         Cursor = Cursors.Hand
                     };
-                    btnTheme.FlatAppearance.BorderColor = isCurrent ? sCol : ColBorder;
+                    btnTheme.FlatAppearance.BorderColor = isCurrent ? sCol : pCol;
                     btnTheme.FlatAppearance.BorderSize = isCurrent ? 2 : 1;
 
                     // Sağ tarafa ikili renk önizleme kutucukları çiz
@@ -1108,7 +1165,7 @@ namespace EnvanterSayimApp
                 Panel card = new Panel
                 {
                     Size = new Size(252, 72),
-                    BackColor = isSelected ? ColPrimarySoft : (store.DarkMode ? Color.FromArgb(15, 23, 42) : Color.FromArgb(248, 250, 252)),
+                    BackColor = isSelected ? ColPrimarySoft : ColBg,
                     Margin = new Padding(4, 3, 4, 3),
                     Cursor = Cursors.Hand
                 };
@@ -1741,7 +1798,7 @@ namespace EnvanterSayimApp
                 Font = new Font("Segoe UI", 11.5f, FontStyle.Bold),
                 ForeColor = ColTextDark,
                 Location = new Point(84, 12),
-                Size = new Size(width - 330, 24),
+                Size = new Size(Math.Max(160, width - 410), 24),
                 AutoEllipsis = true
             };
 
@@ -1751,7 +1808,7 @@ namespace EnvanterSayimApp
                 Font = new Font("Segoe UI", 8.8f, FontStyle.Regular),
                 ForeColor = ColTextMuted,
                 Location = new Point(84, 38),
-                Size = new Size(width - 330, 20),
+                Size = new Size(Math.Max(160, width - 410), 20),
                 AutoEllipsis = true
             };
 
@@ -1763,7 +1820,7 @@ namespace EnvanterSayimApp
                     Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                     ForeColor = ColSecondary,
                     Location = new Point(84, 62),
-                    Size = new Size(width - 310, 20),
+                    Size = new Size(Math.Max(160, width - 410), 20),
                     AutoEllipsis = true
                 };
                 card.Controls.Add(lblNotes);
@@ -1774,8 +1831,8 @@ namespace EnvanterSayimApp
                 Text = IsEN ? $"Total: {totalCount}" : $"Toplam: {totalCount} Adet",
                 Font = new Font("Segoe UI", 11f, FontStyle.Bold),
                 ForeColor = ColSecondary,
-                Location = new Point(width - 295, 28),
-                Size = new Size(145, 26),
+                Location = new Point(width - 315, 26),
+                Size = new Size(165, 28),
                 TextAlign = ContentAlignment.MiddleRight
             };
 
@@ -1813,12 +1870,27 @@ namespace EnvanterSayimApp
                 btnDel.FlatAppearance.BorderSize = 0;
                 btnDel.Click += (s, e) => DeleteProductCompletely(prod);
 
+                card.Resize += (s, e) =>
+                {
+                    lblName.Width = Math.Max(160, card.Width - 410);
+                    lblBreakdown.Width = Math.Max(160, card.Width - 410);
+                    lblTotalBadge.Location = new Point(card.Width - 315, 26);
+                    btnEdit.Location = new Point(card.Width - 140, 24);
+                    btnDel.Location = new Point(card.Width - 48, 24);
+                };
+
                 card.Controls.Add(btnEdit);
                 card.Controls.Add(btnDel);
             }
             else
             {
-                lblTotalBadge.Location = new Point(width - 175, 28);
+                lblTotalBadge.Location = new Point(width - 185, 26);
+                card.Resize += (s, e) =>
+                {
+                    lblName.Width = Math.Max(160, card.Width - 290);
+                    lblBreakdown.Width = Math.Max(160, card.Width - 290);
+                    lblTotalBadge.Location = new Point(card.Width - 185, 26);
+                };
             }
 
             return card;
@@ -2357,12 +2429,12 @@ namespace EnvanterSayimApp
 
         private Color ColPrimary => AppHelper.GetPrimaryColor(store.ColorTheme, store.DarkMode);
         private Color ColSecondary => AppHelper.GetSecondaryColor(store.ColorTheme, store.DarkMode);
-        private Color ColBg => store.DarkMode ? Color.FromArgb(15, 23, 42) : Color.FromArgb(248, 250, 252);
-        private Color ColCard => store.DarkMode ? Color.FromArgb(30, 41, 59) : Color.White;
-        private Color ColSurfaceAlt => store.DarkMode ? Color.FromArgb(51, 65, 85) : Color.FromArgb(226, 232, 240);
+        private Color ColBg => AppHelper.GetBgColor(store.ColorTheme, store.DarkMode);
+        private Color ColCard => AppHelper.GetCardColor(store.ColorTheme, store.DarkMode);
+        private Color ColSurfaceAlt => AppHelper.GetSurfaceAltColor(store.ColorTheme, store.DarkMode);
         private Color ColTextDark => store.DarkMode ? Color.FromArgb(248, 250, 252) : Color.FromArgb(15, 23, 42);
-        private Color ColTextMuted => store.DarkMode ? Color.FromArgb(148, 163, 184) : Color.FromArgb(100, 116, 139);
-        private Color ColBorder => store.DarkMode ? Color.FromArgb(100, 116, 139) : Color.FromArgb(30, 41, 59);
+        private Color ColTextMuted => store.DarkMode ? Color.FromArgb(175, 190, 210) : Color.FromArgb(71, 85, 105);
+        private Color ColBorder => AppHelper.GetBorderColor(store.ColorTheme, store.DarkMode);
         private Color ColDanger => store.DarkMode ? Color.FromArgb(251, 113, 133) : Color.FromArgb(225, 29, 72);
         private Color ColDangerBg => store.DarkMode ? Color.FromArgb(76, 5, 25) : Color.FromArgb(254, 226, 226);
 
@@ -2803,12 +2875,12 @@ namespace EnvanterSayimApp
         private Color ColPrimary => AppHelper.GetPrimaryColor(store.ColorTheme, store.DarkMode);
         private Color ColSecondary => AppHelper.GetSecondaryColor(store.ColorTheme, store.DarkMode);
         private Color ColPrimarySoft => AppHelper.GetPrimarySoftBg(store.ColorTheme, store.DarkMode);
-        private Color ColBg => store.DarkMode ? Color.FromArgb(15, 23, 42) : Color.FromArgb(248, 250, 252);
-        private Color ColCard => store.DarkMode ? Color.FromArgb(30, 41, 59) : Color.White;
-        private Color ColSurfaceAlt => store.DarkMode ? Color.FromArgb(51, 65, 85) : Color.FromArgb(241, 245, 249);
+        private Color ColBg => AppHelper.GetBgColor(store.ColorTheme, store.DarkMode);
+        private Color ColCard => AppHelper.GetCardColor(store.ColorTheme, store.DarkMode);
+        private Color ColSurfaceAlt => AppHelper.GetSurfaceAltColor(store.ColorTheme, store.DarkMode);
         private Color ColTextDark => store.DarkMode ? Color.FromArgb(248, 250, 252) : Color.FromArgb(15, 23, 42);
-        private Color ColTextMuted => store.DarkMode ? Color.FromArgb(148, 163, 184) : Color.FromArgb(100, 116, 139);
-        private Color ColBorder => store.DarkMode ? Color.FromArgb(51, 65, 85) : Color.FromArgb(226, 232, 240);
+        private Color ColTextMuted => store.DarkMode ? Color.FromArgb(175, 190, 210) : Color.FromArgb(71, 85, 105);
+        private Color ColBorder => AppHelper.GetBorderColor(store.ColorTheme, store.DarkMode);
 
         public AddProductToRoomDialog(InventoryStore store, RoomData currentRoom)
         {

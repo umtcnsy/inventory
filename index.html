@@ -26,6 +26,22 @@
       --col-primary-soft: rgba(14, 165, 233, 0.16);
       --col-secondary: #14b8a6;
       --col-secondary-soft: rgba(20, 184, 166, 0.18);
+      --bg-app: #071626;
+      --bg-card: #0e2740;
+      --bg-surface: #173d61;
+      --border-app: #245a8c;
+    }
+    body.bg-slate-100, html.dark body.dark\:bg-slate-900 {
+      background-color: var(--bg-app) !important;
+    }
+    .bg-white, html.dark .dark\:bg-slate-800 {
+      background-color: var(--bg-card) !important;
+    }
+    .bg-slate-100, html.dark .dark\:bg-slate-700, html.dark .dark\:bg-slate-900 {
+      background-color: var(--bg-surface) !important;
+    }
+    .border-slate-200, html.dark .dark\:border-slate-700, .border-slate-100 {
+      border-color: var(--border-app) !important;
     }
     .btn-primary {
       background-color: var(--col-primary);
@@ -579,7 +595,7 @@
     const STORE_NAME = 'appState';
     const STATE_KEY = 'inventoryData_v4';
 
-    // 4 İkili Renk Paleti Tanımları
+    // 4 İkili Renk Paleti Tanımları (Arayüz Arka Plan, Kart ve Buton Renkleriyle)
     const DUAL_COLOR_THEMES = [
       {
         id: 0,
@@ -589,7 +605,9 @@
         primaryHover: '#0284c7',
         primarySoft: 'rgba(14, 165, 233, 0.16)',
         secondary: '#14b8a6',
-        secondarySoft: 'rgba(20, 184, 166, 0.18)'
+        secondarySoft: 'rgba(20, 184, 166, 0.18)',
+        darkBg: '#071626', darkCard: '#0e2740', darkSurface: '#173d61', darkBorder: '#245a8c',
+        lightBg: '#e0f2fe', lightCard: '#f0fdfa', lightSurface: '#bae6fd', lightBorder: '#7dd3fc'
       },
       {
         id: 1,
@@ -599,7 +617,9 @@
         primaryHover: '#059669',
         primarySoft: 'rgba(16, 185, 129, 0.16)',
         secondary: '#f59e0b',
-        secondarySoft: 'rgba(245, 158, 11, 0.18)'
+        secondarySoft: 'rgba(245, 158, 11, 0.18)',
+        darkBg: '#061c16', darkCard: '#0c3026', darkSurface: '#154a3a', darkBorder: '#227359',
+        lightBg: '#d1fae5', lightCard: '#fffbeb', lightSurface: '#a7f3d0', lightBorder: '#6ee7b7'
       },
       {
         id: 2,
@@ -609,7 +629,9 @@
         primaryHover: '#e11d48',
         primarySoft: 'rgba(244, 63, 94, 0.16)',
         secondary: '#f97316',
-        secondarySoft: 'rgba(249, 115, 22, 0.18)'
+        secondarySoft: 'rgba(249, 115, 22, 0.18)',
+        darkBg: '#1f0913', darkCard: '#34101f', darkSurface: '#521a30', darkBorder: '#80294a',
+        lightBg: '#ffe4e6', lightCard: '#fff7ed', lightSurface: '#fecdd3', lightBorder: '#fda4af'
       },
       {
         id: 3,
@@ -619,7 +641,9 @@
         primaryHover: '#7c3aed',
         primarySoft: 'rgba(139, 92, 246, 0.16)',
         secondary: '#ec4899',
-        secondarySoft: 'rgba(236, 72, 153, 0.18)'
+        secondarySoft: 'rgba(236, 72, 153, 0.18)',
+        darkBg: '#140a26', darkCard: '#251245', darkSurface: '#3a1e6b', darkBorder: '#5b30a6',
+        lightBg: '#ede9fe', lightCard: '#fdf2f8', lightSurface: '#ddd6fe', lightBorder: '#c4b5fd'
       }
     ];
 
@@ -773,6 +797,10 @@
       htmlEl.style.setProperty('--col-primary-soft', theme.primarySoft);
       htmlEl.style.setProperty('--col-secondary', theme.secondary);
       htmlEl.style.setProperty('--col-secondary-soft', theme.secondarySoft);
+      htmlEl.style.setProperty('--bg-app', state.darkMode ? theme.darkBg : theme.lightBg);
+      htmlEl.style.setProperty('--bg-card', state.darkMode ? theme.darkCard : theme.lightCard);
+      htmlEl.style.setProperty('--bg-surface', state.darkMode ? theme.darkSurface : theme.lightSurface);
+      htmlEl.style.setProperty('--border-app', state.darkMode ? theme.darkBorder : theme.lightBorder);
 
       // Statik metinleri güncelle
       document.getElementById('lblSettingsBtn').textContent = T('Ayarlar', 'Settings');
