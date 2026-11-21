@@ -13,15 +13,22 @@ using System.Xml.Serialization;
 namespace EnvanterSayimApp
 {
     // =========================================================================
-    // VERİ MODELLERİ (XML İLE OTOMATİK KAYIT, FOTOĞRAF VE DEFTER DESTEKLİ)
+    // VERİ MODELLERİ (SERİ NO TABLOSU: NO | SERİ NO | DURUM DESTEKLİ)
     // =========================================================================
+    [Serializable]
+    public class SerialRecord
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString("N");
+        public string SerialNo { get; set; } = "";
+        public string Status { get; set; } = "";
+    }
+
     [Serializable]
     public class ProductItem
     {
         public string Id { get; set; }
         public string Name { get; set; }
         public string PhotoBase64 { get; set; }
-        public string Notebook { get; set; } = "";
     }
 
     [Serializable]
@@ -29,7 +36,7 @@ namespace EnvanterSayimApp
     {
         public string ProductId { get; set; }
         public int Quantity { get; set; }
-        public string Notebook { get; set; } = "";
+        public List<SerialRecord> Serials { get; set; } = new List<SerialRecord>();
     }
 
     [Serializable]
@@ -46,23 +53,12 @@ namespace EnvanterSayimApp
             return entry != null ? entry.Quantity : 0;
         }
 
-        public string GetNotebook(string productId)
+        public List<SerialRecord> GetSerials(string productId)
         {
             var entry = Items.FirstOrDefault(x => x.ProductId == productId);
-            return entry != null ? (entry.Notebook ?? "") : "";
-        }
-
-        public void SetNotebook(string productId, string notebook)
-        {
-            var entry = Items.FirstOrDefault(x => x.ProductId == productId);
-            if (entry != null)
-            {
-                entry.Notebook = notebook ?? "";
-            }
-            else
-            {
-                Items.Add(new RoomProductEntry { ProductId = productId, Quantity = 1, Notebook = notebook ?? "" });
-            }
+            if (entry == null) return new List<SerialRecord>();
+            if (entry.Serials == null) entry.Serials = new List<SerialRecord>();
+            return entry.Serials;
         }
 
         public bool HasProduct(string productId)
@@ -80,7 +76,7 @@ namespace EnvanterSayimApp
             }
             else
             {
-                Items.Add(new RoomProductEntry { ProductId = productId, Quantity = qty, Notebook = "" });
+                Items.Add(new RoomProductEntry { ProductId = productId, Quantity = qty });
             }
         }
 
@@ -93,13 +89,14 @@ namespace EnvanterSayimApp
     [Serializable]
     public class InventoryStore
     {
-        public string ViewMode { get; set; } = "list"; // "list" (Dümdüz Liste) veya "grid" (Kare Kare)
-        public bool DarkMode { get; set; } = true;     // Varsayılan Karanlık Mod aktif
+        public string ViewMode { get; set; } = "list"; // "list" | "grid"
+        public bool DarkMode { get; set; } = true;     // Koyu / Açık Mod
+        public string Language { get; set; } = "tr";   // "tr" | "en"
+        public int ColorTheme { get; set; } = 0;       // 0: Okyanus&Turkuaz, 1: Zümrüt&Altın, 2: Kızıl&Turuncu, 3: Mor&Pembe
         public List<ProductItem> Products { get; set; } = new List<ProductItem>();
         public List<RoomData> Rooms { get; set; } = new List<RoomData>();
     }
 
-    // Çift Tamponlu (Titreme Yapmayan) FlowLayoutPanel
     public class SmoothFlowPanel : FlowLayoutPanel
     {
         public SmoothFlowPanel()
@@ -110,7 +107,7 @@ namespace EnvanterSayimApp
     }
 
     // =========================================================================
-    // YARDIMCI GÖRSEL, TEMA VE VERİ SINIFI
+    // YARDIMCI GÖRSEL, DİL, TEMA VE VERİ SINIFI
     // =========================================================================
     public static class AppHelper
     {
@@ -128,6 +125,58 @@ namespace EnvanterSayimApp
             catch { }
         }
 
+        // Sadece adı "laptop" içeren ürünlerde Seri No tablosu gösterilsin
+        public static bool IsLaptopProduct(string productName)
+        {
+            if (string.IsNullOrWhiteSpace(productName)) return false;
+            return productName.IndexOf("laptop", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        // 4 İkili Renk Paleti (Primary + Secondary)
+        public static Color GetPrimaryColor(int themeIdx, bool dark)
+        {
+            switch (themeIdx)
+            {
+                case 1: return dark ? Color.FromArgb(16, 185, 129) : Color.FromArgb(5, 150, 105);   // Zümrüt Yeşili
+                case 2: return dark ? Color.FromArgb(244, 63, 94) : Color.FromArgb(225, 29, 72);    // Kızıl Rose
+                case 3: return dark ? Color.FromArgb(139, 92, 246) : Color.FromArgb(124, 58, 237);  // Kraliyet Moru
+                default: return dark ? Color.FromArgb(14, 165, 233) : Color.FromArgb(2, 132, 199);  // Okyanus Mavisi (Varsayılan)
+            }
+        }
+
+        public static Color GetSecondaryColor(int themeIdx, bool dark)
+        {
+            switch (themeIdx)
+            {
+                case 1: return dark ? Color.FromArgb(245, 158, 11) : Color.FromArgb(217, 119, 6);   // Altın Kehribar
+                case 2: return dark ? Color.FromArgb(249, 115, 22) : Color.FromArgb(234, 88, 12);   // Gün Batımı Turuncu
+                case 3: return dark ? Color.FromArgb(236, 72, 153) : Color.FromArgb(219, 39, 119);  // Fuşya Pembe
+                default: return dark ? Color.FromArgb(20, 184, 166) : Color.FromArgb(13, 148, 136); // Turkuaz (Varsayılan)
+            }
+        }
+
+        public static Color GetPrimarySoftBg(int themeIdx, bool dark)
+        {
+            switch (themeIdx)
+            {
+                case 1: return dark ? Color.FromArgb(6, 78, 59) : Color.FromArgb(209, 250, 229);
+                case 2: return dark ? Color.FromArgb(136, 19, 55) : Color.FromArgb(255, 228, 230);
+                case 3: return dark ? Color.FromArgb(76, 29, 149) : Color.FromArgb(237, 233, 254);
+                default: return dark ? Color.FromArgb(12, 74, 110) : Color.FromArgb(224, 242, 254);
+            }
+        }
+
+        public static Color GetSecondarySoftBg(int themeIdx, bool dark)
+        {
+            switch (themeIdx)
+            {
+                case 1: return dark ? Color.FromArgb(120, 53, 15) : Color.FromArgb(254, 243, 199);
+                case 2: return dark ? Color.FromArgb(124, 45, 18) : Color.FromArgb(255, 237, 213);
+                case 3: return dark ? Color.FromArgb(131, 24, 67) : Color.FromArgb(252, 231, 243);
+                default: return dark ? Color.FromArgb(19, 78, 74) : Color.FromArgb(204, 251, 241);
+            }
+        }
+
         private static readonly Dictionary<string, Image> ImageCache = new Dictionary<string, Image>();
 
         public static string DataFilePath
@@ -137,27 +186,6 @@ namespace EnvanterSayimApp
                 string dir = AppDomain.CurrentDomain.BaseDirectory;
                 return Path.Combine(dir, "envanter_verisi.xml");
             }
-        }
-
-        public static int CountNotebookLines(string notebook)
-        {
-            if (string.IsNullOrWhiteSpace(notebook)) return 0;
-            return notebook
-                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                .Count(line => !string.IsNullOrWhiteSpace(line));
-        }
-
-        public static string GetNotebookPreview(string notebook, int maxLen = 70)
-        {
-            if (string.IsNullOrWhiteSpace(notebook)) return "";
-            var lines = notebook
-                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(l => l.Trim())
-                .Where(l => l.Length > 0)
-                .ToList();
-            if (lines.Count == 0) return "";
-            string joined = string.Join(" • ", lines);
-            return joined.Length > maxLen ? joined.Substring(0, maxLen) + "..." : joined;
         }
 
         public static void ClearImageCache(string productId = null)
@@ -247,7 +275,7 @@ namespace EnvanterSayimApp
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Veri kaydedilirken hata oluştu: " + ex.Message, "Kayıt Hatası", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Save Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
@@ -262,14 +290,15 @@ namespace EnvanterSayimApp
                     {
                         var loaded = (InventoryStore)serializer.Deserialize(sr);
                         if (loaded != null && (loaded.Rooms.Count > 0 || loaded.Products.Count > 0))
+                        {
+                            if (string.IsNullOrEmpty(loaded.Language)) loaded.Language = "tr";
                             return loaded;
+                        }
                     }
                 }
             }
-            catch
-            {
-                // Varsayılan inventory odası ve ürünleri yükle
-            }
+            catch { }
+
             var initial = SeedData.CreateInitialStore(true);
             SaveStore(initial);
             return initial;
@@ -277,7 +306,7 @@ namespace EnvanterSayimApp
     }
 
     // =========================================================================
-    // ANA MASAÜSTÜ PENCERESİ (MAIN FORM) - KARANLIK MOD & DEFTER DESTEKLİ
+    // ANA MASAÜSTÜ PENCERESİ (SOL ÜST AYARLAR + 4 İKİLİ RENK + TR/EN + SERİ NO TABLOSU)
     // =========================================================================
     public class MainForm : Form
     {
@@ -285,32 +314,33 @@ namespace EnvanterSayimApp
         private string activeTab = "rooms"; // "rooms", "catalog", "summary"
         private string currentRoomId = null;
 
-        // Dinamik Tema Renkleri (Dark / Light)
-        private Color ColBrand => store.DarkMode ? Color.FromArgb(99, 102, 241) : Color.FromArgb(79, 70, 229);
-        private Color ColBrandLight => store.DarkMode ? Color.FromArgb(49, 46, 129) : Color.FromArgb(238, 242, 255);
-        private Color ColBrandText => store.DarkMode ? Color.FromArgb(199, 210, 254) : Color.FromArgb(79, 70, 229);
+        private bool IsEN => store.Language == "en";
+        private string T(string tr, string en) => IsEN ? en : tr;
+
+        // Dinamik İkili Renk & Tema Paleti
+        private Color ColPrimary => AppHelper.GetPrimaryColor(store.ColorTheme, store.DarkMode);
+        private Color ColSecondary => AppHelper.GetSecondaryColor(store.ColorTheme, store.DarkMode);
+        private Color ColPrimarySoft => AppHelper.GetPrimarySoftBg(store.ColorTheme, store.DarkMode);
+        private Color ColSecondarySoft => AppHelper.GetSecondarySoftBg(store.ColorTheme, store.DarkMode);
+
         private Color ColBg => store.DarkMode ? Color.FromArgb(15, 23, 42) : Color.FromArgb(241, 245, 249);
         private Color ColCard => store.DarkMode ? Color.FromArgb(30, 41, 59) : Color.White;
-        private Color ColSurfaceAlt => store.DarkMode ? Color.FromArgb(51, 65, 85) : Color.FromArgb(241, 245, 249);
+        private Color ColSurfaceAlt => store.DarkMode ? Color.FromArgb(51, 65, 85) : Color.FromArgb(226, 232, 240);
         private Color ColInputBg => store.DarkMode ? Color.FromArgb(15, 23, 42) : Color.White;
         private Color ColTextDark => store.DarkMode ? Color.FromArgb(248, 250, 252) : Color.FromArgb(15, 23, 42);
         private Color ColTextMuted => store.DarkMode ? Color.FromArgb(148, 163, 184) : Color.FromArgb(100, 116, 139);
-        private Color ColBorder => store.DarkMode ? Color.FromArgb(51, 65, 85) : Color.FromArgb(226, 232, 240);
-        private Color ColEmerald => store.DarkMode ? Color.FromArgb(52, 211, 153) : Color.FromArgb(16, 185, 129);
-        private Color ColAmberBg => store.DarkMode ? Color.FromArgb(120, 53, 15) : Color.FromArgb(254, 243, 199);
-        private Color ColAmberText => store.DarkMode ? Color.FromArgb(253, 230, 138) : Color.FromArgb(180, 83, 9);
+        private Color ColBorder => store.DarkMode ? Color.FromArgb(51, 65, 85) : Color.FromArgb(203, 213, 225);
         private Color ColDanger => store.DarkMode ? Color.FromArgb(251, 113, 133) : Color.FromArgb(225, 29, 72);
         private Color ColDangerBg => store.DarkMode ? Color.FromArgb(76, 5, 25) : Color.FromArgb(254, 226, 226);
 
         // UI Kontrolleri
         private Panel topBar;
+        private Button btnTopLeftSettings; // SOL ÜST AYARLAR BUTONU
         private Label lblLogo;
         private Button btnTabRooms;
         private Button btnTabCatalog;
         private Button btnTabSummary;
-        private Button btnThemeToggle;
         private Button btnExportCsv;
-        private Button btnReset;
 
         private Panel sidebarPanel;
         private Panel sidebarTop;
@@ -336,7 +366,6 @@ namespace EnvanterSayimApp
 
         public MainForm()
         {
-            this.Text = "Envanter & Oda Sayım Uygulaması";
             this.Size = new Size(1280, 800);
             this.MinimumSize = new Size(980, 620);
             this.StartPosition = FormStartPosition.CenterScreen;
@@ -348,7 +377,7 @@ namespace EnvanterSayimApp
                 currentRoomId = store.Rooms[0].Id;
 
             BuildUI();
-            ApplyThemeToStaticControls();
+            ApplyThemeAndLanguage();
             RefreshAll();
         }
 
@@ -360,12 +389,12 @@ namespace EnvanterSayimApp
 
         private void BuildUI()
         {
-            // 1. ÜST BAR (TOP HEADER)
+            // 1. ÜST BAR (SOL ÜSTTE AYARLAR BUTONU İLE)
             topBar = new Panel
             {
                 Dock = DockStyle.Top,
                 Height = 64,
-                Padding = new Padding(16, 10, 16, 10)
+                Padding = new Padding(14, 10, 16, 10)
             };
             topBar.Paint += (s, e) =>
             {
@@ -373,30 +402,45 @@ namespace EnvanterSayimApp
                     e.Graphics.DrawLine(p, 0, topBar.Height - 1, topBar.Width, topBar.Height - 1);
             };
 
+            // SOL ÜST AYARLAR BUTONU
+            btnTopLeftSettings = new Button
+            {
+                Text = "⚙️ Ayarlar",
+                Location = new Point(14, 12),
+                Size = new Size(120, 40),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnTopLeftSettings.FlatAppearance.BorderSize = 1;
+            btnTopLeftSettings.Click += (s, e) => OpenTopLeftSettingsDialog();
+            topBar.Controls.Add(btnTopLeftSettings);
+
+            // Başlık (Sol Üst Ayarlar butonunun hemen sağında)
             lblLogo = new Label
             {
-                Text = "📦 Envanter & Oda Sayım",
-                Font = new Font("Segoe UI", 13.5f, FontStyle.Bold),
+                Text = "📦 Envanter Sayım",
+                Font = new Font("Segoe UI", 13f, FontStyle.Bold),
                 AutoSize = true,
-                Location = new Point(16, 17)
+                Location = new Point(146, 18)
             };
             topBar.Controls.Add(lblLogo);
 
-            btnTabRooms = CreateTabButton("🚪 Odalar ve Sayım", 270);
+            // Orta Sekme Butonları
+            btnTabRooms = CreateTabButton("🚪 Odalar", 350, 155);
             btnTabRooms.Click += (s, e) => SwitchTab("rooms");
 
-            btnTabCatalog = CreateTabButton("📦 Ürün Havuzu", 442);
-            btnTabCatalog.Width = 152;
+            btnTabCatalog = CreateTabButton("📦 Ürün Havuzu", 512, 160);
             btnTabCatalog.Click += (s, e) => SwitchTab("catalog");
 
-            btnTabSummary = CreateTabButton("📊 Genel Özet", 600);
-            btnTabSummary.Width = 145;
+            btnTabSummary = CreateTabButton("📊 Genel Özet", 679, 155);
             btnTabSummary.Click += (s, e) => SwitchTab("summary");
 
             topBar.Controls.Add(btnTabRooms);
             topBar.Controls.Add(btnTabCatalog);
             topBar.Controls.Add(btnTabSummary);
 
+            // Sağ Aksiyon: Excel İndir
             FlowLayoutPanel rightActions = new FlowLayoutPanel
             {
                 Dock = DockStyle.Right,
@@ -406,21 +450,21 @@ namespace EnvanterSayimApp
                 Padding = new Padding(0, 4, 0, 0)
             };
 
-            btnReset = CreateActionButton("Sıfırla", ColDangerBg, ColDanger, 80);
-            btnReset.Click += (s, e) => ResetAllData();
-
-            btnExportCsv = CreateActionButton("📥 Excel İndir", Color.FromArgb(6, 78, 59), Color.FromArgb(110, 231, 183), 125);
+            btnExportCsv = new Button
+            {
+                Text = "📥 Excel (CSV)",
+                Size = new Size(140, 38),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnExportCsv.FlatAppearance.BorderSize = 0;
             btnExportCsv.Click += (s, e) => ExportToCsv();
 
-            btnThemeToggle = CreateActionButton("☀️ Açık Mod", ColSurfaceAlt, ColTextDark, 125);
-            btnThemeToggle.Click += (s, e) => ToggleDarkMode();
-
-            rightActions.Controls.Add(btnReset);
             rightActions.Controls.Add(btnExportCsv);
-            rightActions.Controls.Add(btnThemeToggle);
             topBar.Controls.Add(rightActions);
 
-            // 2. SOL PANEL (ODALAR LİSTESİ SIDEBAR)
+            // 2. SOL PANEL (ODALAR SIDEBAR)
             sidebarPanel = new Panel
             {
                 Dock = DockStyle.Left,
@@ -461,16 +505,16 @@ namespace EnvanterSayimApp
 
             lblRoomSearchHint = new Label
             {
-                Text = "🔍 Oda Ara:",
-                Font = new Font("Segoe UI", 8f, FontStyle.Regular),
+                Text = "🔍 Ara:",
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Regular),
                 Location = new Point(4, 74),
                 AutoSize = true
             };
 
             txtRoomSearch = new TextBox
             {
-                Location = new Point(74, 71),
-                Size = new Size(186, 26),
+                Location = new Point(62, 71),
+                Size = new Size(198, 26),
                 Font = new Font("Segoe UI", 9.5f),
                 BorderStyle = BorderStyle.FixedSingle
             };
@@ -493,7 +537,7 @@ namespace EnvanterSayimApp
             sidebarPanel.Controls.Add(roomsListPanel);
             sidebarPanel.Controls.Add(sidebarTop);
 
-            // 3. ANA İÇERİK ALANI (SAĞ TARAF)
+            // 3. ANA İÇERİK ALANI
             mainArea = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -513,7 +557,7 @@ namespace EnvanterSayimApp
 
             lblContentTitle = new Label
             {
-                Text = "Oda Adı",
+                Text = "inventory",
                 Font = new Font("Segoe UI", 15f, FontStyle.Bold),
                 Location = new Point(16, 12),
                 AutoSize = true
@@ -521,7 +565,7 @@ namespace EnvanterSayimApp
 
             lblContentStats = new Label
             {
-                Text = "0 Çeşit Ürün • 0 Toplam Adet",
+                Text = "0 Ürün",
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 Location = new Point(18, 42),
                 AutoSize = true
@@ -529,8 +573,8 @@ namespace EnvanterSayimApp
 
             btnEditRoom = new Button
             {
-                Text = "✏️ Odayı Düzenle",
-                Size = new Size(125, 30),
+                Text = "✏️ Düzenle",
+                Size = new Size(115, 30),
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand
@@ -544,8 +588,8 @@ namespace EnvanterSayimApp
 
             btnDeleteRoom = new Button
             {
-                Text = "🗑️ Odayı Sil",
-                Size = new Size(100, 30),
+                Text = "🗑️ Sil",
+                Size = new Size(90, 30),
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand
@@ -566,7 +610,7 @@ namespace EnvanterSayimApp
 
             lblProdSearch = new Label
             {
-                Text = "🔍 Ürün Ara:",
+                Text = "🔍 Ürün / Seri No Ara:",
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 Location = new Point(18, 76),
                 AutoSize = true
@@ -574,8 +618,8 @@ namespace EnvanterSayimApp
 
             txtProductSearch = new TextBox
             {
-                Location = new Point(105, 73),
-                Size = new Size(270, 28),
+                Location = new Point(160, 73),
+                Size = new Size(260, 28),
                 Font = new Font("Segoe UI", 10f),
                 BorderStyle = BorderStyle.FixedSingle
             };
@@ -594,8 +638,8 @@ namespace EnvanterSayimApp
 
             btnViewGrid = new Button
             {
-                Text = "⊞ Kare Kare (Grid)",
-                Size = new Size(145, 32),
+                Text = "⊞ Kare Kare",
+                Size = new Size(135, 32),
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 Cursor = Cursors.Hand
@@ -633,36 +677,289 @@ namespace EnvanterSayimApp
             LayoutContentHeader();
         }
 
-        private void ToggleDarkMode()
+        // =====================================================================
+        // SOL ÜST AYARLAR PENCERESİ (DİL + KOYU/AÇIK MOD + 4 İKİLİ RENK OPSİYONU)
+        // =====================================================================
+        private void OpenTopLeftSettingsDialog()
         {
-            store.DarkMode = !store.DarkMode;
-            AppHelper.SaveStore(store);
-            AppHelper.ApplyWindowTitleBarTheme(this, store.DarkMode);
-            ApplyThemeToStaticControls();
-            RefreshAll();
+            using (Form dlg = new Form())
+            {
+                dlg.Text = T("⚙️ Uygulama Ayarları", "⚙️ Application Settings");
+                dlg.Size = new Size(460, 520);
+                dlg.StartPosition = FormStartPosition.Manual;
+                Point screenPt = this.PointToScreen(new Point(14, 58));
+                dlg.Location = screenPt;
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dlg.MaximizeBox = false;
+                dlg.MinimizeBox = false;
+                dlg.BackColor = ColCard;
+                dlg.ForeColor = ColTextDark;
+                dlg.Font = new Font("Segoe UI", 9.5f);
+                dlg.HandleCreated += (s, e) => AppHelper.ApplyWindowTitleBarTheme(dlg, store.DarkMode);
+
+                // 1. Dil Seçeneği (TR / EN)
+                Label lblLang = new Label
+                {
+                    Text = T("🌐 Arayüz Dili / Interface Language", "🌐 Interface Language / Arayüz Dili"),
+                    Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    ForeColor = ColTextDark,
+                    Location = new Point(20, 16),
+                    AutoSize = true
+                };
+
+                Button btnTR = new Button
+                {
+                    Text = "🇹🇷 Türkçe",
+                    Location = new Point(20, 42),
+                    Size = new Size(195, 38),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = !IsEN ? ColPrimary : ColSurfaceAlt,
+                    ForeColor = !IsEN ? Color.White : ColTextDark,
+                    Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                btnTR.FlatAppearance.BorderSize = 0;
+
+                Button btnEN = new Button
+                {
+                    Text = "🇬🇧 English",
+                    Location = new Point(225, 42),
+                    Size = new Size(195, 38),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = IsEN ? ColPrimary : ColSurfaceAlt,
+                    ForeColor = IsEN ? Color.White : ColTextDark,
+                    Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                btnEN.FlatAppearance.BorderSize = 0;
+
+                btnTR.Click += (s, e) =>
+                {
+                    store.Language = "tr";
+                    AppHelper.SaveStore(store);
+                    ApplyThemeAndLanguage();
+                    RefreshAll();
+                    dlg.Close();
+                };
+
+                btnEN.Click += (s, e) =>
+                {
+                    store.Language = "en";
+                    AppHelper.SaveStore(store);
+                    ApplyThemeAndLanguage();
+                    RefreshAll();
+                    dlg.Close();
+                };
+
+                // 2. Açık / Koyu Mod
+                Label lblMode = new Label
+                {
+                    Text = T("🌓 Görünüm Modu (Açık / Koyu)", "🌓 Appearance Mode (Dark / Light)"),
+                    Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    ForeColor = ColTextDark,
+                    Location = new Point(20, 96),
+                    AutoSize = true
+                };
+
+                Button btnDark = new Button
+                {
+                    Text = T("🌙 Koyu Mod (Dark)", "🌙 Dark Mode"),
+                    Location = new Point(20, 122),
+                    Size = new Size(195, 38),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = store.DarkMode ? ColPrimary : ColSurfaceAlt,
+                    ForeColor = store.DarkMode ? Color.White : ColTextDark,
+                    Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                btnDark.FlatAppearance.BorderSize = 0;
+
+                Button btnLight = new Button
+                {
+                    Text = T("☀️ Açık Mod (Light)", "☀️ Light Mode"),
+                    Location = new Point(225, 122),
+                    Size = new Size(195, 38),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = !store.DarkMode ? ColPrimary : ColSurfaceAlt,
+                    ForeColor = !store.DarkMode ? Color.White : ColTextDark,
+                    Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                btnLight.FlatAppearance.BorderSize = 0;
+
+                btnDark.Click += (s, e) =>
+                {
+                    store.DarkMode = true;
+                    AppHelper.SaveStore(store);
+                    AppHelper.ApplyWindowTitleBarTheme(this, true);
+                    ApplyThemeAndLanguage();
+                    RefreshAll();
+                    dlg.Close();
+                };
+
+                btnLight.Click += (s, e) =>
+                {
+                    store.DarkMode = false;
+                    AppHelper.SaveStore(store);
+                    AppHelper.ApplyWindowTitleBarTheme(this, false);
+                    ApplyThemeAndLanguage();
+                    RefreshAll();
+                    dlg.Close();
+                };
+
+                // 3. 4 İKİLİ RENK OPSİYONU
+                Label lblColors = new Label
+                {
+                    Text = T("🎨 4 İkili Renk Teması (Dual-Color Themes)", "🎨 4 Dual-Color Theme Options"),
+                    Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    ForeColor = ColTextDark,
+                    Location = new Point(20, 178),
+                    AutoSize = true
+                };
+
+                string[] themeNames = new[]
+                {
+                    T("1) 🔵🟢 Okyanus Mavisi & Turkuaz", "1) 🔵🟢 Ocean Blue & Teal"),
+                    T("2) 🟢🟡 Zümrüt Yeşili & Altın Kehribar", "2) 🟢🟡 Emerald Green & Amber Gold"),
+                    T("3) 🔴🟠 Kızıl Rose & Gün Batımı Turuncu", "3) 🔴🟠 Crimson Rose & Sunset Orange"),
+                    T("4) 🟣🩷 Kraliyet Moru & Fuşya Pembe", "4) 🟣🩷 Royal Purple & Fuchsia Pink")
+                };
+
+                dlg.Controls.AddRange(new Control[] { lblLang, btnTR, btnEN, lblMode, btnDark, btnLight, lblColors });
+
+                for (int i = 0; i < 4; i++)
+                {
+                    int idx = i;
+                    bool isCurrent = store.ColorTheme == idx;
+                    Color pCol = AppHelper.GetPrimaryColor(idx, store.DarkMode);
+                    Color sCol = AppHelper.GetSecondaryColor(idx, store.DarkMode);
+
+                    Button btnTheme = new Button
+                    {
+                        Text = (isCurrent ? "✓  " : "    ") + themeNames[idx],
+                        Location = new Point(20, 206 + (idx * 44)),
+                        Size = new Size(400, 38),
+                        TextAlign = ContentAlignment.MiddleLeft,
+                        Padding = new Padding(12, 0, 0, 0),
+                        FlatStyle = FlatStyle.Flat,
+                        BackColor = isCurrent ? pCol : ColSurfaceAlt,
+                        ForeColor = isCurrent ? Color.White : ColTextDark,
+                        Font = new Font("Segoe UI", 9.2f, FontStyle.Bold),
+                        Cursor = Cursors.Hand
+                    };
+                    btnTheme.FlatAppearance.BorderColor = isCurrent ? sCol : ColBorder;
+                    btnTheme.FlatAppearance.BorderSize = isCurrent ? 2 : 1;
+
+                    // Sağ tarafa ikili renk önizleme kutucukları çiz
+                    btnTheme.Paint += (sender, pe) =>
+                    {
+                        using (SolidBrush b1 = new SolidBrush(pCol))
+                        using (SolidBrush b2 = new SolidBrush(sCol))
+                        using (Pen borderPen = new Pen(Color.White, 1.5f))
+                        {
+                            pe.Graphics.FillRectangle(b1, btnTheme.Width - 62, 8, 22, 22);
+                            pe.Graphics.DrawRectangle(borderPen, btnTheme.Width - 62, 8, 22, 22);
+                            pe.Graphics.FillRectangle(b2, btnTheme.Width - 34, 8, 22, 22);
+                            pe.Graphics.DrawRectangle(borderPen, btnTheme.Width - 34, 8, 22, 22);
+                        }
+                    };
+
+                    btnTheme.Click += (s, e) =>
+                    {
+                        store.ColorTheme = idx;
+                        AppHelper.SaveStore(store);
+                        ApplyThemeAndLanguage();
+                        RefreshAll();
+                        dlg.Close();
+                    };
+
+                    dlg.Controls.Add(btnTheme);
+                }
+
+                // 4. Alt Veri Sıfırlama / Geri Yükleme Butonları
+                Button btnRestoreInventory = new Button
+                {
+                    Text = T("🔄 Inventory Odasını Geri Yükle", "🔄 Restore Default Inventory"),
+                    Location = new Point(20, 400),
+                    Size = new Size(215, 36),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = ColSurfaceAlt,
+                    ForeColor = ColTextDark,
+                    Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                btnRestoreInventory.FlatAppearance.BorderSize = 0;
+                btnRestoreInventory.Click += (s, e) =>
+                {
+                    bool dark = store.DarkMode;
+                    string lang = store.Language;
+                    int theme = store.ColorTheme;
+                    AppHelper.ClearImageCache();
+                    store = SeedData.CreateInitialStore(dark);
+                    store.Language = lang;
+                    store.ColorTheme = theme;
+                    currentRoomId = store.Rooms.FirstOrDefault()?.Id;
+                    AppHelper.SaveStore(store);
+                    RefreshAll();
+                    dlg.Close();
+                };
+
+                Button btnResetAll = new Button
+                {
+                    Text = T("🗑️ Tüm Verileri Sıfırla", "🗑️ Reset All Data"),
+                    Location = new Point(245, 400),
+                    Size = new Size(175, 36),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = ColDangerBg,
+                    ForeColor = ColDanger,
+                    Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                btnResetAll.FlatAppearance.BorderSize = 0;
+                btnResetAll.Click += (s, e) =>
+                {
+                    dlg.Close();
+                    ResetAllData();
+                };
+
+                dlg.Controls.Add(btnRestoreInventory);
+                dlg.Controls.Add(btnResetAll);
+                dlg.ShowDialog(this);
+            }
         }
 
-        private void ApplyThemeToStaticControls()
+        private void ApplyThemeAndLanguage()
         {
+            this.Text = T("Envanter & Oda Sayım Uygulaması", "Inventory & Room Counting Application");
             this.BackColor = ColBg;
+
             topBar.BackColor = ColCard;
+            btnTopLeftSettings.Text = T("⚙️ Ayarlar", "⚙️ Settings");
+            btnTopLeftSettings.BackColor = ColPrimarySoft;
+            btnTopLeftSettings.ForeColor = store.DarkMode ? Color.White : ColPrimary;
+            btnTopLeftSettings.FlatAppearance.BorderColor = ColPrimary;
+
+            lblLogo.Text = T("📦 Envanter Sayım", "📦 Inventory Count");
             lblLogo.ForeColor = ColTextDark;
 
-            btnThemeToggle.Text = store.DarkMode ? "☀️ Açık Mod" : "🌙 Karanlık Mod";
-            btnThemeToggle.BackColor = store.DarkMode ? Color.FromArgb(51, 65, 85) : Color.FromArgb(30, 41, 59);
-            btnThemeToggle.ForeColor = store.DarkMode ? Color.FromArgb(253, 224, 71) : Color.White;
+            btnTabRooms.Text = T("🚪 Odalar ve Sayım", "🚪 Rooms & Count");
+            btnTabCatalog.Text = T("📦 Ürün Havuzu", "📦 Product Pool");
+            btnTabSummary.Text = T("📊 Genel Özet", "📊 Global Summary");
 
-            btnExportCsv.BackColor = store.DarkMode ? Color.FromArgb(6, 78, 59) : Color.FromArgb(209, 250, 229);
-            btnExportCsv.ForeColor = store.DarkMode ? Color.FromArgb(110, 231, 183) : Color.FromArgb(6, 95, 70);
-
-            btnReset.BackColor = ColDangerBg;
-            btnReset.ForeColor = ColDanger;
+            btnExportCsv.Text = T("📥 Excel İndir", "📥 Export Excel");
+            btnExportCsv.BackColor = ColSecondary;
+            btnExportCsv.ForeColor = Color.White;
 
             sidebarPanel.BackColor = ColCard;
             sidebarTop.BackColor = ColCard;
+            lblRoomsHeader.Text = T("ODALAR / BÖLGELER", "ROOMS / LOCATIONS");
             lblRoomsHeader.ForeColor = ColTextMuted;
-            btnAddRoom.BackColor = ColBrand;
+
+            btnAddRoom.Text = T("+ Yeni Oda Ekle", "+ Add New Room");
+            btnAddRoom.BackColor = ColPrimary;
             btnAddRoom.ForeColor = Color.White;
+
+            lblRoomSearchHint.Text = T("🔍 Ara:", "🔍 Find:");
             lblRoomSearchHint.ForeColor = ColTextMuted;
             txtRoomSearch.BackColor = ColInputBg;
             txtRoomSearch.ForeColor = ColTextDark;
@@ -671,20 +968,26 @@ namespace EnvanterSayimApp
             mainArea.BackColor = ColBg;
             contentHeaderPanel.BackColor = ColCard;
             lblContentTitle.ForeColor = ColTextDark;
-            lblContentStats.ForeColor = ColBrandText;
+            lblContentStats.ForeColor = ColSecondary;
 
+            btnEditRoom.Text = T("✏️ Odayı Düzenle", "✏️ Edit Room");
             btnEditRoom.BackColor = ColSurfaceAlt;
             btnEditRoom.ForeColor = ColTextDark;
 
+            btnDeleteRoom.Text = T("🗑️ Odayı Sil", "🗑️ Delete");
             btnDeleteRoom.BackColor = ColDangerBg;
             btnDeleteRoom.ForeColor = ColDanger;
 
-            btnPrimaryAction.BackColor = ColBrand;
+            btnPrimaryAction.BackColor = ColPrimary;
             btnPrimaryAction.ForeColor = Color.White;
 
+            lblProdSearch.Text = T("🔍 Ürün / Seri No:", "🔍 Search Item / SN:");
             lblProdSearch.ForeColor = ColTextMuted;
             txtProductSearch.BackColor = ColInputBg;
             txtProductSearch.ForeColor = ColTextDark;
+
+            btnViewList.Text = T("☰ Dümdüz Liste", "☰ Flat List");
+            btnViewGrid.Text = T("⊞ Kare Kare", "⊞ Square Grid");
 
             mainCardsPanel.BackColor = ColBg;
 
@@ -704,33 +1007,16 @@ namespace EnvanterSayimApp
             btnViewList.Location = new Point(btnViewGrid.Left - btnViewList.Width - 8, 68);
         }
 
-        private Button CreateTabButton(string text, int x)
+        private Button CreateTabButton(string text, int x, int width)
         {
             Button btn = new Button
             {
                 Text = text,
                 Location = new Point(x, 12),
-                Size = new Size(165, 40),
+                Size = new Size(width, 40),
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand
-            };
-            btn.FlatAppearance.BorderSize = 0;
-            return btn;
-        }
-
-        private Button CreateActionButton(string text, Color bg, Color fg, int width)
-        {
-            Button btn = new Button
-            {
-                Text = text,
-                Size = new Size(width, 36),
-                BackColor = bg,
-                ForeColor = fg,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                Cursor = Cursors.Hand,
-                Margin = new Padding(6, 0, 0, 0)
             };
             btn.FlatAppearance.BorderSize = 0;
             return btn;
@@ -754,13 +1040,13 @@ namespace EnvanterSayimApp
         private void UpdateViewToggleStyle()
         {
             bool isList = store.ViewMode == "list";
-            btnViewList.BackColor = isList ? ColBrand : ColSurfaceAlt;
+            btnViewList.BackColor = isList ? ColPrimary : ColSurfaceAlt;
             btnViewList.ForeColor = isList ? Color.White : ColTextDark;
-            btnViewList.FlatAppearance.BorderColor = isList ? ColBrand : ColBorder;
+            btnViewList.FlatAppearance.BorderColor = isList ? ColPrimary : ColBorder;
 
-            btnViewGrid.BackColor = !isList ? ColBrand : ColSurfaceAlt;
+            btnViewGrid.BackColor = !isList ? ColPrimary : ColSurfaceAlt;
             btnViewGrid.ForeColor = !isList ? Color.White : ColTextDark;
-            btnViewGrid.FlatAppearance.BorderColor = !isList ? ColBrand : ColBorder;
+            btnViewGrid.FlatAppearance.BorderColor = !isList ? ColPrimary : ColBorder;
         }
 
         private void UpdateTabButtonStyles()
@@ -775,8 +1061,8 @@ namespace EnvanterSayimApp
             foreach (var kv in tabs)
             {
                 bool active = kv.Key == activeTab;
-                kv.Value.BackColor = active ? ColBrandLight : ColSurfaceAlt;
-                kv.Value.ForeColor = active ? ColBrandText : ColTextMuted;
+                kv.Value.BackColor = active ? ColPrimary : ColSurfaceAlt;
+                kv.Value.ForeColor = active ? Color.White : ColTextMuted;
             }
         }
 
@@ -799,7 +1085,7 @@ namespace EnvanterSayimApp
         }
 
         // =====================================================================
-        // SOL PANEL: ODALAR LİSTESİ RENDER
+        // SOL PANEL: ODALAR LİSTESİ
         // =====================================================================
         private void RenderRoomsSidebar()
         {
@@ -822,13 +1108,13 @@ namespace EnvanterSayimApp
                 Panel card = new Panel
                 {
                     Size = new Size(252, 72),
-                    BackColor = isSelected ? ColBrandLight : (store.DarkMode ? Color.FromArgb(15, 23, 42) : Color.FromArgb(248, 250, 252)),
+                    BackColor = isSelected ? ColPrimarySoft : (store.DarkMode ? Color.FromArgb(15, 23, 42) : Color.FromArgb(248, 250, 252)),
                     Margin = new Padding(4, 3, 4, 3),
                     Cursor = Cursors.Hand
                 };
                 card.Paint += (s, e) =>
                 {
-                    Color borderCol = isSelected ? ColBrand : ColBorder;
+                    Color borderCol = isSelected ? ColPrimary : ColBorder;
                     int bw = isSelected ? 2 : 1;
                     using (Pen p = new Pen(borderCol, bw))
                         e.Graphics.DrawRectangle(p, 0, 0, card.Width - 1, card.Height - 1);
@@ -838,7 +1124,7 @@ namespace EnvanterSayimApp
                 {
                     Text = room.Name,
                     Font = new Font("Segoe UI", 10f, FontStyle.Bold),
-                    ForeColor = isSelected ? ColBrandText : ColTextDark,
+                    ForeColor = ColTextDark,
                     Location = new Point(10, 8),
                     Size = new Size(230, 22),
                     AutoEllipsis = true,
@@ -847,7 +1133,7 @@ namespace EnvanterSayimApp
 
                 Label lblNote = new Label
                 {
-                    Text = string.IsNullOrEmpty(room.Note) ? "Oda Envanteri" : room.Note,
+                    Text = string.IsNullOrEmpty(room.Note) ? T("Oda Envanteri", "Room Inventory") : room.Note,
                     Font = new Font("Segoe UI", 8f, FontStyle.Regular),
                     ForeColor = ColTextMuted,
                     Location = new Point(10, 29),
@@ -858,9 +1144,11 @@ namespace EnvanterSayimApp
 
                 Label lblCounts = new Label
                 {
-                    Text = $"{validVariety} Çeşit Ürün  •  Toplam {totalQty} Adet",
+                    Text = IsEN
+                        ? $"{validVariety} Items  •  Total {totalQty}"
+                        : $"{validVariety} Çeşit Ürün  •  Toplam {totalQty} Adet",
                     Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
-                    ForeColor = isSelected ? ColBrandText : ColEmerald,
+                    ForeColor = ColSecondary,
                     Location = new Point(10, 47),
                     AutoSize = true,
                     Cursor = Cursors.Hand
@@ -889,7 +1177,7 @@ namespace EnvanterSayimApp
         }
 
         // =====================================================================
-        // ANA KARTLAR ALANI (DÜMDÜZ LİSTE VEYA KARE KARE GÖRÜNÜM)
+        // ANA KARTLAR ALANI
         // =====================================================================
         private void RenderMainCards()
         {
@@ -908,8 +1196,8 @@ namespace EnvanterSayimApp
                 var room = store.Rooms.FirstOrDefault(r => r.Id == currentRoomId);
                 if (room == null)
                 {
-                    lblContentTitle.Text = "Henüz Oda Seçilmedi";
-                    lblContentStats.Text = "Sol menüden yeni bir oda ekleyin veya seçin.";
+                    lblContentTitle.Text = T("Henüz Oda Seçilmedi", "No Room Selected");
+                    lblContentStats.Text = T("Sol menüden yeni bir oda ekleyin veya seçin.", "Add or select a room from the left sidebar.");
                     btnEditRoom.Visible = false;
                     btnDeleteRoom.Visible = false;
                     btnPrimaryAction.Visible = false;
@@ -920,7 +1208,7 @@ namespace EnvanterSayimApp
                 btnEditRoom.Visible = true;
                 btnDeleteRoom.Visible = true;
                 btnPrimaryAction.Visible = true;
-                btnPrimaryAction.Text = "+ Odaya Ürün Ekle";
+                btnPrimaryAction.Text = T("+ Odaya Ürün Ekle", "+ Add Item to Room");
 
                 UpdateCurrentRoomHeaderStats(room);
 
@@ -932,15 +1220,17 @@ namespace EnvanterSayimApp
                     })
                     .Where(x => x.Product != null && (
                         x.Product.Name.ToLowerInvariant().Contains(query) ||
-                        (!string.IsNullOrEmpty(x.Entry.Notebook) && x.Entry.Notebook.ToLowerInvariant().Contains(query))
+                        (x.Entry.Serials != null && x.Entry.Serials.Any(sr =>
+                            (sr.SerialNo ?? "").ToLowerInvariant().Contains(query) ||
+                            (sr.Status ?? "").ToLowerInvariant().Contains(query)))
                     ))
                     .ToList();
 
                 if (roomProducts.Count == 0)
                 {
                     mainCardsPanel.Controls.Add(CreateEmptyStatePanel(
-                        "Bu Odada Ürün Bulunamadı",
-                        "Sağ üstteki '+ Odaya Ürün Ekle' butonuna tıklayarak daha önce başka odalara eklediğiniz ürünlerden seçebilir veya yeni fotoğraflı ürün ekleyebilirsiniz."
+                        T("Bu Odada Ürün Bulunamadı", "No Items Found in This Room"),
+                        T("Sağ üstteki '+ Odaya Ürün Ekle' butonuna tıklayarak ürün ekleyebilirsiniz.", "Click '+ Add Item to Room' at the top right to add products.")
                     ));
                 }
                 else
@@ -960,10 +1250,12 @@ namespace EnvanterSayimApp
                 btnEditRoom.Visible = false;
                 btnDeleteRoom.Visible = false;
                 btnPrimaryAction.Visible = true;
-                btnPrimaryAction.Text = "+ Havuza Ürün Tanımla";
+                btnPrimaryAction.Text = T("+ Havuza Ürün Ekle", "+ New Catalog Item");
 
-                lblContentTitle.Text = "Genel Ürün Havuzu (Katalog)";
-                lblContentStats.Text = $"Toplam {store.Products.Count} Kayıtlı Ürün Çeşidi (Tüm odalarda ortak kullanılır)";
+                lblContentTitle.Text = T("Genel Ürün Havuzu (Katalog)", "Global Product Pool (Catalog)");
+                lblContentStats.Text = IsEN
+                    ? $"Total {store.Products.Count} Registered Products"
+                    : $"Toplam {store.Products.Count} Kayıtlı Ürün Çeşidi";
 
                 var products = store.Products
                     .Where(p => p.Name.ToLowerInvariant().Contains(query))
@@ -985,8 +1277,10 @@ namespace EnvanterSayimApp
                 btnPrimaryAction.Visible = false;
 
                 int totalSayim = store.Rooms.Sum(r => r.Items.Where(i => store.Products.Any(p => p.Id == i.ProductId)).Sum(i => i.Quantity));
-                lblContentTitle.Text = "Genel Özet & Oda Dağılım Raporu";
-                lblContentStats.Text = $"{store.Rooms.Count} Oda  •  {store.Products.Count} Ürün Çeşidi  •  Genel Toplam: {totalSayim} Adet";
+                lblContentTitle.Text = T("Genel Özet & Oda Dağılım Raporu", "Global Summary & Room Breakdown");
+                lblContentStats.Text = IsEN
+                    ? $"{store.Rooms.Count} Rooms  •  {store.Products.Count} Products  •  Grand Total: {totalSayim}"
+                    : $"{store.Rooms.Count} Oda  •  {store.Products.Count} Ürün Çeşidi  •  Genel Toplam: {totalSayim} Adet";
 
                 var products = store.Products
                     .Where(p => p.Name.ToLowerInvariant().Contains(query))
@@ -1011,7 +1305,9 @@ namespace EnvanterSayimApp
             lblContentTitle.Text = room.Name + (string.IsNullOrEmpty(room.Note) ? "" : $" ({room.Note})");
             int variety = room.Items.Count(i => store.Products.Any(p => p.Id == i.ProductId));
             int total = room.Items.Where(i => store.Products.Any(p => p.Id == i.ProductId)).Sum(i => i.Quantity);
-            lblContentStats.Text = $"{variety} Çeşit Ürün  •  Toplam {total} Adet Sayıldı";
+            lblContentStats.Text = IsEN
+                ? $"{variety} Product Types  •  Total {total} Counted"
+                : $"{variety} Çeşit Ürün  •  Toplam {total} Adet Sayıldı";
         }
 
         private void AdjustListCardWidths()
@@ -1028,18 +1324,18 @@ namespace EnvanterSayimApp
         }
 
         // =====================================================================
-        // GÖRÜNÜM 1: ODA İÇİ "DÜMDÜZ LİSTE" KARTI (+ / - / INPUT + DEFTER)
+        // GÖRÜNÜM 1: ODA İÇİ "DÜMDÜZ LİSTE" KARTI (SADECE LAPTOPLARDA SERİ NO TABLOSU)
         // =====================================================================
         private Control CreateRoomProductListCard(RoomData room, ProductItem product, int quantity, int width)
         {
-            string notebookText = room.GetNotebook(product.Id);
-            int noteLines = AppHelper.CountNotebookLines(notebookText);
-            string notePreview = AppHelper.GetNotebookPreview(notebookText, 85);
+            bool isLaptop = AppHelper.IsLaptopProduct(product.Name);
+            var serials = room.GetSerials(product.Id);
+            int serialCount = serials.Count;
 
             Panel card = new Panel
             {
                 Tag = "list-card",
-                Size = new Size(width, noteLines > 0 ? 96 : 84),
+                Size = new Size(width, (isLaptop && serialCount > 0) ? 96 : 84),
                 BackColor = ColCard,
                 Margin = new Padding(2, 4, 2, 4)
             };
@@ -1063,47 +1359,59 @@ namespace EnvanterSayimApp
             };
             card.Controls.Add(lblName);
 
-            int btnY = 40;
-            if (noteLines > 0)
+            int btnY = 42;
+            if (isLaptop && serialCount > 0)
             {
-                Label lblNotePreview = new Label
+                string preview = string.Join("  |  ", serials.Take(4).Select((sr, i) => $"#{i + 1} {sr.SerialNo} ({sr.Status})"));
+                Label lblSerialPreview = new Label
                 {
-                    Text = "📓 Seri No / Defter: " + notePreview,
+                    Text = "📋 " + preview,
                     Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
-                    ForeColor = ColAmberText,
+                    ForeColor = ColSecondary,
                     Location = new Point(84, 34),
                     Size = new Size(width - 310, 18),
                     AutoEllipsis = true,
                     Cursor = Cursors.Hand
                 };
-                lblNotePreview.Click += (s, e) => OpenNotebookDialog(room, product);
-                card.Controls.Add(lblNotePreview);
+                lblSerialPreview.Click += (s, e) => OpenLaptopSerialTableDialog(room, product);
+                card.Controls.Add(lblSerialPreview);
                 btnY = 58;
             }
 
-            // 📓 DEFTER (SERİ NO / NUMARA) BUTONU
-            Button btnNotebook = new Button
+            int nextBtnX = 84;
+
+            // SADECE ADI LAPTOP OLANLARDA SERİ NO TABLOSU BUTONU GÖRÜNÜR
+            if (isLaptop)
             {
-                Text = noteLines > 0 ? $"📓 Defter / Seri No ({noteLines})" : "📓 Defter / Seri No Yaz",
-                Location = new Point(84, btnY),
-                Size = new Size(165, 28),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = noteLines > 0 ? ColAmberBg : ColBrandLight,
-                ForeColor = noteLines > 0 ? ColAmberText : ColBrandText,
-                Font = new Font("Segoe UI", 8.2f, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnNotebook.FlatAppearance.BorderSize = 0;
-            btnNotebook.Click += (s, e) => OpenNotebookDialog(room, product);
+                Button btnSerialTable = new Button
+                {
+                    Text = serialCount > 0
+                        ? T($"📋 Seri No Tablosu ({serialCount})", $"📋 Serial No Table ({serialCount})")
+                        : T("📋 Seri No Tablosu", "📋 Serial No Table"),
+                    Location = new Point(nextBtnX, btnY),
+                    Size = new Size(165, 28),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = serialCount > 0 ? ColSecondary : ColPrimarySoft,
+                    ForeColor = Color.White,
+                    Font = new Font("Segoe UI", 8.2f, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                if (serialCount == 0 && !store.DarkMode)
+                    btnSerialTable.ForeColor = ColPrimary;
+                btnSerialTable.FlatAppearance.BorderSize = 0;
+                btnSerialTable.Click += (s, e) => OpenLaptopSerialTableDialog(room, product);
+                card.Controls.Add(btnSerialTable);
+                nextBtnX += 172;
+            }
 
             Button btnEditProd = new Button
             {
-                Text = "📷 Düzenle",
-                Location = new Point(256, btnY),
+                Text = T("📷 Düzenle", "📷 Edit"),
+                Location = new Point(nextBtnX, btnY),
                 Size = new Size(92, 28),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = ColSurfaceAlt,
-                ForeColor = ColTextMuted,
+                ForeColor = ColTextDark,
                 Font = new Font("Segoe UI", 8f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
@@ -1112,9 +1420,9 @@ namespace EnvanterSayimApp
 
             Button btnRemoveFromRoom = new Button
             {
-                Text = "🗑️ Kaldır",
-                Location = new Point(354, btnY),
-                Size = new Size(82, 28),
+                Text = T("🗑️ Kaldır", "🗑️ Remove"),
+                Location = new Point(nextBtnX + 98, btnY),
+                Size = new Size(86, 28),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = ColDangerBg,
                 ForeColor = ColDanger,
@@ -1132,7 +1440,6 @@ namespace EnvanterSayimApp
                 qtyControlBox.Location = new Point(card.Width - 196, (card.Height - 42) / 2);
             };
 
-            card.Controls.Add(btnNotebook);
             card.Controls.Add(btnEditProd);
             card.Controls.Add(btnRemoveFromRoom);
             card.Controls.Add(qtyControlBox);
@@ -1141,16 +1448,17 @@ namespace EnvanterSayimApp
         }
 
         // =====================================================================
-        // GÖRÜNÜM 2: ODA İÇİ "KARE KARE (GRID)" KARTI (+ / - / INPUT + DEFTER)
+        // GÖRÜNÜM 2: ODA İÇİ "KARE KARE (GRID)" KARTI (SADECE LAPTOPLARDA SERİ NO)
         // =====================================================================
         private Control CreateRoomProductGridCard(RoomData room, ProductItem product, int quantity)
         {
-            string notebookText = room.GetNotebook(product.Id);
-            int noteLines = AppHelper.CountNotebookLines(notebookText);
+            bool isLaptop = AppHelper.IsLaptopProduct(product.Name);
+            var serials = room.GetSerials(product.Id);
+            int serialCount = serials.Count;
 
             Panel card = new Panel
             {
-                Size = new Size(220, 304),
+                Size = new Size(220, isLaptop ? 304 : 272),
                 BackColor = ColCard,
                 Margin = new Padding(6)
             };
@@ -1172,30 +1480,39 @@ namespace EnvanterSayimApp
                 Size = new Size(200, 24),
                 AutoEllipsis = true
             };
+            card.Controls.Add(lblName);
 
-            // 📓 DEFTER (SERİ NO / NUMARA) TAM GENİŞLİK BUTONU
-            Button btnNotebook = new Button
+            int actionRowY = 184;
+
+            if (isLaptop)
             {
-                Text = noteLines > 0 ? $"📓 Defter / Seri No ({noteLines})" : "📓 Defter / Seri No Yaz",
-                Location = new Point(10, 182),
-                Size = new Size(200, 28),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = noteLines > 0 ? ColAmberBg : ColBrandLight,
-                ForeColor = noteLines > 0 ? ColAmberText : ColBrandText,
-                Font = new Font("Segoe UI", 8.2f, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
-            btnNotebook.FlatAppearance.BorderSize = 0;
-            btnNotebook.Click += (s, e) => OpenNotebookDialog(room, product);
+                Button btnSerialTable = new Button
+                {
+                    Text = serialCount > 0
+                        ? T($"📋 Seri No Tablosu ({serialCount})", $"📋 Serial No Table ({serialCount})")
+                        : T("📋 Seri No Tablosu", "📋 Serial No Table"),
+                    Location = new Point(10, 182),
+                    Size = new Size(200, 28),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = serialCount > 0 ? ColSecondary : ColPrimarySoft,
+                    ForeColor = (serialCount == 0 && !store.DarkMode) ? ColPrimary : Color.White,
+                    Font = new Font("Segoe UI", 8.2f, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                btnSerialTable.FlatAppearance.BorderSize = 0;
+                btnSerialTable.Click += (s, e) => OpenLaptopSerialTableDialog(room, product);
+                card.Controls.Add(btnSerialTable);
+                actionRowY = 215;
+            }
 
             Button btnEdit = new Button
             {
-                Text = "📷 Düzenle",
-                Location = new Point(10, 215),
+                Text = T("📷 Düzenle", "📷 Edit"),
+                Location = new Point(10, actionRowY),
                 Size = new Size(97, 25),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = ColSurfaceAlt,
-                ForeColor = ColTextMuted,
+                ForeColor = ColTextDark,
                 Font = new Font("Segoe UI", 7.8f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
@@ -1204,8 +1521,8 @@ namespace EnvanterSayimApp
 
             Button btnDel = new Button
             {
-                Text = "🗑️ Kaldır",
-                Location = new Point(113, 215),
+                Text = T("🗑️ Kaldır", "🗑️ Remove"),
+                Location = new Point(113, actionRowY),
                 Size = new Size(97, 25),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = ColDangerBg,
@@ -1216,10 +1533,8 @@ namespace EnvanterSayimApp
             btnDel.FlatAppearance.BorderSize = 0;
             btnDel.Click += (s, e) => RemoveProductFromCurrentRoom(room, product);
 
-            Panel qtyBar = CreateQuantityControlBar(room, product, quantity, new Point(20, 248));
+            Panel qtyBar = CreateQuantityControlBar(room, product, quantity, new Point(20, actionRowY + 33));
 
-            card.Controls.Add(lblName);
-            card.Controls.Add(btnNotebook);
             card.Controls.Add(btnEdit);
             card.Controls.Add(btnDel);
             card.Controls.Add(qtyBar);
@@ -1275,7 +1590,7 @@ namespace EnvanterSayimApp
                 Location = new Point(134, 4),
                 Size = new Size(42, 34),
                 FlatStyle = FlatStyle.Flat,
-                BackColor = ColBrand,
+                BackColor = ColPrimary,
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 13f, FontStyle.Bold),
                 Cursor = Cursors.Hand
@@ -1287,9 +1602,7 @@ namespace EnvanterSayimApp
             txtQty.KeyPress += (s, e) =>
             {
                 if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
-                {
                     e.Handled = true;
-                }
             };
 
             txtQty.TextChanged += (s, e) =>
@@ -1297,9 +1610,7 @@ namespace EnvanterSayimApp
                 if (suppressTextEvent) return;
                 int parsed = 0;
                 if (!string.IsNullOrWhiteSpace(txtQty.Text))
-                {
                     int.TryParse(txtQty.Text.Trim(), out parsed);
-                }
                 if (parsed < 0) parsed = 0;
 
                 room.SetQuantity(product.Id, parsed);
@@ -1356,7 +1667,7 @@ namespace EnvanterSayimApp
             {
                 Size = size,
                 Location = location,
-                BackColor = ColSurfaceAlt,
+                BackColor = Color.White,
                 SizeMode = PictureBoxSizeMode.Zoom,
                 Cursor = Cursors.Hand
             };
@@ -1369,13 +1680,14 @@ namespace EnvanterSayimApp
             }
             else
             {
+                pic.BackColor = ColSurfaceAlt;
                 pic.Paint += (s, e) =>
                 {
                     using (Font f = new Font("Segoe UI", 8f, FontStyle.Bold))
                     using (SolidBrush b = new SolidBrush(ColTextMuted))
                     {
                         StringFormat sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-                        e.Graphics.DrawString("📷\nFotoğraf\nEkle", f, b, new RectangleF(0, 0, pic.Width, pic.Height), sf);
+                        e.Graphics.DrawString(T("📷\nFotoğraf\nEkle", "📷\nAdd\nPhoto"), f, b, new RectangleF(0, 0, pic.Width, pic.Height), sf);
                     }
                 };
                 pic.Click += (s, e) => OpenProductEditDialog(product);
@@ -1385,7 +1697,7 @@ namespace EnvanterSayimApp
         }
 
         // =====================================================================
-        // ÜRÜN HAVUZU VE GENEL ÖZET KARTLARI (LİSTE & KARE)
+        // ÜRÜN HAVUZU VE GENEL ÖZET KARTLARI
         // =====================================================================
         private Control CreateCatalogSummaryCardList(ProductItem prod, int width, bool isCatalogMode)
         {
@@ -1395,15 +1707,18 @@ namespace EnvanterSayimApp
                 .Select(r => $"{r.Name}: {r.GetQuantity(prod.Id)}")
                 .ToList();
 
-            var notebooksInRooms = store.Rooms
-                .Where(r => !string.IsNullOrWhiteSpace(r.GetNotebook(prod.Id)))
-                .Select(r => $"{r.Name} [{AppHelper.GetNotebookPreview(r.GetNotebook(prod.Id), 55)}]")
-                .ToList();
+            bool isLaptop = AppHelper.IsLaptopProduct(prod.Name);
+            var serialsInRooms = isLaptop
+                ? store.Rooms
+                    .Where(r => r.GetSerials(prod.Id).Count > 0)
+                    .Select(r => $"{r.Name} ({string.Join(", ", r.GetSerials(prod.Id).Select(sr => sr.SerialNo + ":" + sr.Status))})")
+                    .ToList()
+                : new List<string>();
 
             Panel card = new Panel
             {
                 Tag = "list-card",
-                Size = new Size(width, notebooksInRooms.Count > 0 ? 96 : 82),
+                Size = new Size(width, serialsInRooms.Count > 0 ? 96 : 82),
                 BackColor = ColCard,
                 Margin = new Padding(2, 4, 2, 4)
             };
@@ -1417,8 +1732,8 @@ namespace EnvanterSayimApp
             card.Controls.Add(pic);
 
             string breakdownText = roomsBreakdown.Count > 0
-                ? "Oda Dağılımı: " + string.Join("  |  ", roomsBreakdown)
-                : "Henüz hiçbir odada sayılmadı (0 adet)";
+                ? T("Oda Dağılımı: ", "Rooms: ") + string.Join("  |  ", roomsBreakdown)
+                : T("Henüz hiçbir odada sayılmadı (0)", "Not counted in any room (0)");
 
             Label lblName = new Label
             {
@@ -1440,13 +1755,13 @@ namespace EnvanterSayimApp
                 AutoEllipsis = true
             };
 
-            if (notebooksInRooms.Count > 0)
+            if (serialsInRooms.Count > 0)
             {
                 Label lblNotes = new Label
                 {
-                    Text = "📓 Defter Kayıtları: " + string.Join("  |  ", notebooksInRooms),
+                    Text = "📋 " + string.Join("  |  ", serialsInRooms),
                     Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
-                    ForeColor = ColAmberText,
+                    ForeColor = ColSecondary,
                     Location = new Point(84, 62),
                     Size = new Size(width - 310, 20),
                     AutoEllipsis = true
@@ -1456,9 +1771,9 @@ namespace EnvanterSayimApp
 
             Label lblTotalBadge = new Label
             {
-                Text = $"Toplam: {totalCount} Adet",
+                Text = IsEN ? $"Total: {totalCount}" : $"Toplam: {totalCount} Adet",
                 Font = new Font("Segoe UI", 11f, FontStyle.Bold),
-                ForeColor = ColEmerald,
+                ForeColor = ColSecondary,
                 Location = new Point(width - 295, 28),
                 Size = new Size(145, 26),
                 TextAlign = ContentAlignment.MiddleRight
@@ -1472,7 +1787,7 @@ namespace EnvanterSayimApp
             {
                 Button btnEdit = new Button
                 {
-                    Text = "✏️ Düzenle",
+                    Text = T("✏️ Düzenle", "✏️ Edit"),
                     Location = new Point(width - 140, 24),
                     Size = new Size(85, 32),
                     FlatStyle = FlatStyle.Flat,
@@ -1540,9 +1855,9 @@ namespace EnvanterSayimApp
 
             Label lblTotal = new Label
             {
-                Text = $"Genel Toplam: {totalCount} Adet",
+                Text = IsEN ? $"Grand Total: {totalCount}" : $"Genel Toplam: {totalCount} Adet",
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
-                ForeColor = ColEmerald,
+                ForeColor = ColSecondary,
                 Location = new Point(10, 202),
                 AutoSize = true
             };
@@ -1554,7 +1869,7 @@ namespace EnvanterSayimApp
             {
                 Button btnEdit = new Button
                 {
-                    Text = "📷 Fotoğraf / Ad",
+                    Text = T("📷 Düzenle", "📷 Edit"),
                     Location = new Point(10, 228),
                     Size = new Size(140, 28),
                     FlatStyle = FlatStyle.Flat,
@@ -1568,7 +1883,7 @@ namespace EnvanterSayimApp
 
                 Button btnDel = new Button
                 {
-                    Text = "🗑️ Sil",
+                    Text = T("🗑️ Sil", "🗑️ Del"),
                     Location = new Point(156, 228),
                     Size = new Size(52, 28),
                     FlatStyle = FlatStyle.Flat,
@@ -1592,7 +1907,7 @@ namespace EnvanterSayimApp
 
                 Label lblBreak = new Label
                 {
-                    Text = roomsBreakdown.Count > 0 ? string.Join(", ", roomsBreakdown) : "Odalarda yok",
+                    Text = roomsBreakdown.Count > 0 ? string.Join(", ", roomsBreakdown) : T("Odalarda yok", "Not in rooms"),
                     Font = new Font("Segoe UI", 8f),
                     ForeColor = ColTextMuted,
                     Location = new Point(10, 226),
@@ -1647,11 +1962,11 @@ namespace EnvanterSayimApp
         }
 
         // =====================================================================
-        // 📓 ÜRÜN DEFTERİ (SERİ NO / NUMARA / ZİMMET KAYITLARI) PENCERESİ
+        // 📋 LAPTOP SERİ NO TABLOSU PENCERESİ (NO | SERİ NO | DURUM)
         // =====================================================================
-        private void OpenNotebookDialog(RoomData room, ProductItem product)
+        private void OpenLaptopSerialTableDialog(RoomData room, ProductItem product)
         {
-            using (var dlg = new ProductNotebookDialog(store, room, product))
+            using (var dlg = new LaptopSerialTableDialog(store, room, product))
             {
                 dlg.ShowDialog(this);
                 AppHelper.SaveStore(store);
@@ -1659,9 +1974,6 @@ namespace EnvanterSayimApp
             }
         }
 
-        // =====================================================================
-        // DİĞER DİYALOGLAR VE AKSİYONLAR
-        // =====================================================================
         private void OnPrimaryActionClicked()
         {
             if (activeTab == "rooms")
@@ -1686,7 +1998,7 @@ namespace EnvanterSayimApp
         {
             using (Form dlg = new Form())
             {
-                dlg.Text = existingRoom == null ? "Yeni Oda / Bölüm Ekle" : "Oda Bilgilerini Düzenle";
+                dlg.Text = existingRoom == null ? T("Yeni Oda Ekle", "Add New Room") : T("Oda Bilgilerini Düzenle", "Edit Room");
                 dlg.Size = new Size(420, 265);
                 dlg.StartPosition = FormStartPosition.CenterParent;
                 dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -1697,18 +2009,18 @@ namespace EnvanterSayimApp
                 dlg.Font = new Font("Segoe UI", 9.5f);
                 dlg.HandleCreated += (s, e) => AppHelper.ApplyWindowTitleBarTheme(dlg, store.DarkMode);
 
-                Label lbl1 = new Label { Text = "Oda / Bölüm Adı *", Location = new Point(20, 20), AutoSize = true, ForeColor = ColTextDark, Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
+                Label lbl1 = new Label { Text = T("Oda / Bölüm Adı *", "Room / Location Name *"), Location = new Point(20, 20), AutoSize = true, ForeColor = ColTextDark, Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
                 TextBox txtName = new TextBox { Location = new Point(20, 44), Width = 360, BackColor = ColInputBg, ForeColor = ColTextDark, BorderStyle = BorderStyle.FixedSingle, Text = existingRoom != null ? existingRoom.Name : "" };
 
-                Label lbl2 = new Label { Text = "Açıklama / Kat Bilgisi (İsteğe Bağlı)", Location = new Point(20, 86), AutoSize = true, ForeColor = ColTextDark, Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
+                Label lbl2 = new Label { Text = T("Açıklama (İsteğe Bağlı)", "Note / Description (Optional)"), Location = new Point(20, 86), AutoSize = true, ForeColor = ColTextDark, Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
                 TextBox txtNote = new TextBox { Location = new Point(20, 110), Width = 360, BackColor = ColInputBg, ForeColor = ColTextDark, BorderStyle = BorderStyle.FixedSingle, Text = existingRoom != null ? existingRoom.Note : "" };
 
                 Button btnSave = new Button
                 {
-                    Text = "Kaydet",
+                    Text = T("Kaydet", "Save"),
                     Location = new Point(265, 165),
                     Size = new Size(115, 38),
-                    BackColor = ColBrand,
+                    BackColor = ColPrimary,
                     ForeColor = Color.White,
                     FlatStyle = FlatStyle.Flat,
                     Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
@@ -1719,11 +2031,7 @@ namespace EnvanterSayimApp
                 btnSave.Click += (s, e) =>
                 {
                     string name = txtName.Text.Trim();
-                    if (string.IsNullOrEmpty(name))
-                    {
-                        MessageBox.Show("Lütfen oda adını girin.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
+                    if (string.IsNullOrEmpty(name)) return;
 
                     if (existingRoom != null)
                     {
@@ -1759,8 +2067,8 @@ namespace EnvanterSayimApp
             if (room == null) return;
 
             var res = MessageBox.Show(
-                $"\"{room.Name}\" odasını ve içindeki sayım kayıtlarını silmek istediğinize emin misiniz?\n(Ürün havuzundaki ürünler silinmez)",
-                "Odayı Sil",
+                T($"\"{room.Name}\" odasını silmek istediğinize emin misiniz?", $"Are you sure you want to delete room \"{room.Name}\"?"),
+                T("Odayı Sil", "Delete Room"),
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
 
@@ -1776,8 +2084,8 @@ namespace EnvanterSayimApp
         private void RemoveProductFromCurrentRoom(RoomData room, ProductItem product)
         {
             var res = MessageBox.Show(
-                $"\"{product.Name}\" ürününü bu odadan kaldırmak istiyor musunuz?",
-                "Odadan Kaldır",
+                T($"\"{product.Name}\" ürününü bu odadan kaldırmak istiyor musunuz?", $"Remove \"{product.Name}\" from this room?"),
+                T("Odadan Kaldır", "Remove Item"),
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
 
@@ -1792,8 +2100,8 @@ namespace EnvanterSayimApp
         private void DeleteProductCompletely(ProductItem product)
         {
             var res = MessageBox.Show(
-                $"\"{product.Name}\" ürününü genel havuzdan ve tüm odalardan tamamen silmek istediğinize emin misiniz?",
-                "Ürünü Sil",
+                T($"\"{product.Name}\" ürününü tüm odalardan silmek istediğinize emin misiniz?", $"Delete \"{product.Name}\" from catalog and all rooms?"),
+                T("Ürünü Sil", "Delete Product"),
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning);
 
@@ -1813,7 +2121,7 @@ namespace EnvanterSayimApp
         {
             using (Form dlg = new Form())
             {
-                dlg.Text = existingProduct == null ? "Havuza Yeni Ürün Tanımla" : "Ürün Adı ve Fotoğrafını Düzenle";
+                dlg.Text = existingProduct == null ? T("Havuza Yeni Ürün Tanımla", "Add New Product") : T("Ürün Adı ve Fotoğrafını Düzenle", "Edit Product Name & Photo");
                 dlg.Size = new Size(460, 360);
                 dlg.StartPosition = FormStartPosition.CenterParent;
                 dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -1826,16 +2134,16 @@ namespace EnvanterSayimApp
 
                 string tempPhotoBase64 = existingProduct != null ? existingProduct.PhotoBase64 : null;
 
-                Label lblName = new Label { Text = "Ürün Adı *", Location = new Point(20, 18), AutoSize = true, ForeColor = ColTextDark, Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
+                Label lblName = new Label { Text = T("Ürün Adı *", "Product Name *"), Location = new Point(20, 18), AutoSize = true, ForeColor = ColTextDark, Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
                 TextBox txtName = new TextBox { Location = new Point(20, 42), Width = 400, BackColor = ColInputBg, ForeColor = ColTextDark, BorderStyle = BorderStyle.FixedSingle, Text = existingProduct != null ? existingProduct.Name : "" };
 
-                Label lblPhoto = new Label { Text = "Ürün Fotoğrafı", Location = new Point(20, 84), AutoSize = true, ForeColor = ColTextDark, Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
+                Label lblPhoto = new Label { Text = T("Ürün Fotoğrafı", "Product Photo"), Location = new Point(20, 84), AutoSize = true, ForeColor = ColTextDark, Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
 
                 PictureBox picPreview = new PictureBox
                 {
                     Location = new Point(20, 110),
                     Size = new Size(125, 125),
-                    BackColor = ColSurfaceAlt,
+                    BackColor = Color.White,
                     SizeMode = PictureBoxSizeMode.Zoom,
                     BorderStyle = BorderStyle.FixedSingle
                 };
@@ -1848,11 +2156,11 @@ namespace EnvanterSayimApp
 
                 Button btnPickPhoto = new Button
                 {
-                    Text = "📷 Bilgisayardan Fotoğraf Seç...",
+                    Text = T("📷 Bilgisayardan Fotoğraf Seç...", "📷 Choose Photo from PC..."),
                     Location = new Point(160, 110),
                     Size = new Size(260, 38),
-                    BackColor = ColBrandLight,
-                    ForeColor = ColBrandText,
+                    BackColor = ColPrimarySoft,
+                    ForeColor = store.DarkMode ? Color.White : ColPrimary,
                     FlatStyle = FlatStyle.Flat,
                     Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                     Cursor = Cursors.Hand
@@ -1861,7 +2169,7 @@ namespace EnvanterSayimApp
 
                 Button btnClearPhoto = new Button
                 {
-                    Text = "Fotoğrafı Kaldır",
+                    Text = T("Fotoğrafı Kaldır", "Remove Photo"),
                     Location = new Point(160, 156),
                     Size = new Size(140, 32),
                     BackColor = ColSurfaceAlt,
@@ -1875,8 +2183,7 @@ namespace EnvanterSayimApp
                 {
                     using (OpenFileDialog ofd = new OpenFileDialog())
                     {
-                        ofd.Title = "Ürün Fotoğrafı Seçin";
-                        ofd.Filter = "Görsel Dosyaları|*.jpg;*.jpeg;*.png;*.bmp;*.gif";
+                        ofd.Filter = "Images|*.jpg;*.jpeg;*.png;*.bmp;*.gif";
                         if (ofd.ShowDialog(dlg) == DialogResult.OK)
                         {
                             try
@@ -1890,7 +2197,7 @@ namespace EnvanterSayimApp
                             }
                             catch (Exception ex)
                             {
-                                MessageBox.Show("Fotoğraf yüklenemedi: " + ex.Message);
+                                MessageBox.Show(ex.Message);
                             }
                         }
                     }
@@ -1904,10 +2211,10 @@ namespace EnvanterSayimApp
 
                 Button btnSave = new Button
                 {
-                    Text = "Kaydet",
+                    Text = T("Kaydet", "Save"),
                     Location = new Point(300, 260),
                     Size = new Size(120, 40),
-                    BackColor = ColBrand,
+                    BackColor = ColPrimary,
                     ForeColor = Color.White,
                     FlatStyle = FlatStyle.Flat,
                     Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
@@ -1918,11 +2225,7 @@ namespace EnvanterSayimApp
                 btnSave.Click += (s, e) =>
                 {
                     string name = txtName.Text.Trim();
-                    if (string.IsNullOrEmpty(name))
-                    {
-                        MessageBox.Show("Lütfen ürün adını girin.");
-                        return;
-                    }
+                    if (string.IsNullOrEmpty(name)) return;
 
                     if (existingProduct != null)
                     {
@@ -1958,7 +2261,7 @@ namespace EnvanterSayimApp
 
             using (Form dlg = new Form())
             {
-                dlg.Text = product.Name + " - Fotoğraf Önizleme";
+                dlg.Text = product.Name;
                 dlg.Size = new Size(560, 560);
                 dlg.StartPosition = FormStartPosition.CenterParent;
                 dlg.BackColor = Color.FromArgb(15, 23, 42);
@@ -1969,7 +2272,7 @@ namespace EnvanterSayimApp
                     Dock = DockStyle.Fill,
                     Image = img,
                     SizeMode = PictureBoxSizeMode.Zoom,
-                    BackColor = Color.FromArgb(15, 23, 42)
+                    BackColor = Color.White
                 };
                 dlg.Controls.Add(pic);
                 dlg.ShowDialog(this);
@@ -1980,14 +2283,14 @@ namespace EnvanterSayimApp
         {
             using (SaveFileDialog sfd = new SaveFileDialog())
             {
-                sfd.Title = "Excel (CSV) Raporunu Kaydet";
-                sfd.Filter = "CSV Dosyası (*.csv)|*.csv";
-                sfd.FileName = $"Envanter_Sayim_Raporu_{DateTime.Now:yyyy-MM-dd}.csv";
+                sfd.Title = T("Excel (CSV) Raporunu Kaydet", "Save Excel (CSV) Report");
+                sfd.Filter = "CSV (*.csv)|*.csv";
+                sfd.FileName = $"Inventory_Report_{DateTime.Now:yyyy-MM-dd}.csv";
 
                 if (sfd.ShowDialog(this) == DialogResult.OK)
                 {
                     StringBuilder sb = new StringBuilder();
-                    sb.AppendLine("Oda Adi;Oda Aciklamasi;Urun Adi;Sayim Adedi;Defter / Seri No / Numaralar");
+                    sb.AppendLine(T("Oda Adi;Aciklama;Urun Adi;Adet;Seri No Tablosu (NO - SERI NO - DURUM)", "Room;Note;Product;Quantity;Serial Table (NO - SERIAL NO - STATUS)"));
 
                     foreach (var room in store.Rooms)
                     {
@@ -1996,46 +2299,28 @@ namespace EnvanterSayimApp
                             var prod = store.Products.FirstOrDefault(p => p.Id == item.ProductId);
                             if (prod != null)
                             {
-                                string notesFlat = (item.Notebook ?? "").Replace("\r\n", " | ").Replace("\n", " | ").Trim();
-                                sb.AppendLine($"\"{EscapeCsv(room.Name)}\";\"{EscapeCsv(room.Note)}\";\"{EscapeCsv(prod.Name)}\";{item.Quantity};\"{EscapeCsv(notesFlat)}\"");
+                                var serials = item.Serials ?? new List<SerialRecord>();
+                                string serialsText = string.Join(" | ", serials.Select((sr, idx) => $"#{idx + 1} {sr.SerialNo} [{sr.Status}]"));
+                                sb.AppendLine($"\"{EscapeCsv(room.Name)}\";\"{EscapeCsv(room.Note)}\";\"{EscapeCsv(prod.Name)}\";{item.Quantity};\"{EscapeCsv(serialsText)}\"");
                             }
                         }
                     }
 
-                    sb.AppendLine();
-                    sb.AppendLine("GENEL TOPLAM OZETI;;;;");
-                    sb.AppendLine("Urun Adi;Bulundugu Oda Sayisi;Genel Toplam Adet;Oda Dagilimi;Tum Defter Kayitlari");
-
-                    foreach (var prod in store.Products)
-                    {
-                        int total = store.Rooms.Sum(r => r.GetQuantity(prod.Id));
-                        var breakdown = store.Rooms
-                            .Where(r => r.GetQuantity(prod.Id) > 0)
-                            .Select(r => $"{r.Name}: {r.GetQuantity(prod.Id)}")
-                            .ToList();
-
-                        var allNotes = store.Rooms
-                            .Where(r => !string.IsNullOrWhiteSpace(r.GetNotebook(prod.Id)))
-                            .Select(r => $"{r.Name}: {r.GetNotebook(prod.Id).Replace("\r\n", ", ").Replace("\n", ", ")}")
-                            .ToList();
-
-                        sb.AppendLine($"\"{EscapeCsv(prod.Name)}\";{breakdown.Count};{total};\"{EscapeCsv(string.Join(" | ", breakdown))}\";\"{EscapeCsv(string.Join(" || ", allNotes))}\"");
-                    }
-
                     File.WriteAllText(sfd.FileName, sb.ToString(), new UTF8Encoding(true));
-                    MessageBox.Show("Envanter raporu (Defter / Seri No kayıtlarıyla birlikte) Excel (CSV) formatında kaydedildi!", "Dışa Aktarıldı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(T("Excel (CSV) raporu kaydedildi!", "Excel (CSV) report saved!"), "OK", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
         }
 
-        private string EscapeCsv(string val)
-        {
-            return (val ?? "").Replace("\"", "\"\"");
-        }
+        private string EscapeCsv(string val) => (val ?? "").Replace("\"", "\"\"");
 
         private void ResetAllData()
         {
-            var res = MessageBox.Show("TÜM ODALARI VE ÜRÜNLERİ SİLMEK İSTEDİĞİNİZE EMİN MİSİNİZ?\nBu işlem geri alınamaz.", "Tüm Verileri Sıfırla", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            var res = MessageBox.Show(
+                T("TÜM ODALARI VE ÜRÜNLERİ SİLMEK İSTEDİĞİNİZE EMİN MİSİNİZ?", "ARE YOU SURE YOU WANT TO DELETE ALL ROOMS AND PRODUCTS?"),
+                T("Sıfırla", "Reset All"),
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
             if (res == DialogResult.Yes)
             {
                 AppHelper.ClearImageCache();
@@ -2049,36 +2334,47 @@ namespace EnvanterSayimApp
     }
 
     // =========================================================================
-    // 📓 ÜRÜN DEFTERİ PENCERESİ (NUMARA, SERİ NO VE NOT DEFTERİ)
+    // 📋 LAPTOP SERİ NO TABLOSU PENCERESİ (PAINT ÖRNEĞİNDEKİ GİBİ: NO | SERİ NO | DURUM)
     // =========================================================================
-    public class ProductNotebookDialog : Form
+    public class LaptopSerialTableDialog : Form
     {
         private readonly InventoryStore store;
         private readonly RoomData room;
         private readonly ProductItem product;
+        private readonly List<SerialRecord> serials;
 
-        private TextBox txtQuickSerial;
-        private TextBox txtNotebook;
-        private Label lblLineCount;
+        private string editingSerialId = null;
+        private TextBox txtSerialNo;
+        private TextBox txtStatus;
+        private Button btnAddOrUpdate;
+        private Button btnCancelEdit;
+        private SmoothFlowPanel tableRowsPanel;
+        private Label lblSubInfo;
         private Button btnSyncQty;
 
-        private Color ColBrand => store.DarkMode ? Color.FromArgb(99, 102, 241) : Color.FromArgb(79, 70, 229);
+        private bool IsEN => store.Language == "en";
+        private string T(string tr, string en) => IsEN ? en : tr;
+
+        private Color ColPrimary => AppHelper.GetPrimaryColor(store.ColorTheme, store.DarkMode);
+        private Color ColSecondary => AppHelper.GetSecondaryColor(store.ColorTheme, store.DarkMode);
         private Color ColBg => store.DarkMode ? Color.FromArgb(15, 23, 42) : Color.FromArgb(248, 250, 252);
         private Color ColCard => store.DarkMode ? Color.FromArgb(30, 41, 59) : Color.White;
-        private Color ColSurfaceAlt => store.DarkMode ? Color.FromArgb(51, 65, 85) : Color.FromArgb(241, 245, 249);
+        private Color ColSurfaceAlt => store.DarkMode ? Color.FromArgb(51, 65, 85) : Color.FromArgb(226, 232, 240);
         private Color ColTextDark => store.DarkMode ? Color.FromArgb(248, 250, 252) : Color.FromArgb(15, 23, 42);
         private Color ColTextMuted => store.DarkMode ? Color.FromArgb(148, 163, 184) : Color.FromArgb(100, 116, 139);
-        private Color ColAmberBg => store.DarkMode ? Color.FromArgb(120, 53, 15) : Color.FromArgb(254, 243, 199);
-        private Color ColAmberText => store.DarkMode ? Color.FromArgb(253, 230, 138) : Color.FromArgb(180, 83, 9);
+        private Color ColBorder => store.DarkMode ? Color.FromArgb(100, 116, 139) : Color.FromArgb(30, 41, 59);
+        private Color ColDanger => store.DarkMode ? Color.FromArgb(251, 113, 133) : Color.FromArgb(225, 29, 72);
+        private Color ColDangerBg => store.DarkMode ? Color.FromArgb(76, 5, 25) : Color.FromArgb(254, 226, 226);
 
-        public ProductNotebookDialog(InventoryStore store, RoomData room, ProductItem product)
+        public LaptopSerialTableDialog(InventoryStore store, RoomData room, ProductItem product)
         {
             this.store = store;
             this.room = room;
             this.product = product;
+            this.serials = room.GetSerials(product.Id);
 
-            this.Text = $"📓 Ürün Defteri — {product.Name} ({room.Name})";
-            this.Size = new Size(640, 620);
+            this.Text = T($"📋 Laptop Seri No Tablosu — {product.Name}", $"📋 Laptop Serial Number Table — {product.Name}");
+            this.Size = new Size(720, 650);
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -2087,8 +2383,8 @@ namespace EnvanterSayimApp
             this.ForeColor = ColTextDark;
             this.Font = new Font("Segoe UI", 9.5f);
 
-            BuildNotebookUI();
-            UpdateLineCounter();
+            BuildTableUI();
+            RenderTableRows();
         }
 
         protected override void OnHandleCreated(EventArgs e)
@@ -2097,21 +2393,21 @@ namespace EnvanterSayimApp
             AppHelper.ApplyWindowTitleBarTheme(this, store.DarkMode);
         }
 
-        private void BuildNotebookUI()
+        private void BuildTableUI()
         {
-            // Üst Ürün Bilgi Kartı
+            // Üst Laptop Bilgi Kartı
             Panel topInfo = new Panel
             {
                 Location = new Point(18, 14),
-                Size = new Size(588, 72),
+                Size = new Size(668, 66),
                 BackColor = ColBg
             };
 
             PictureBox pic = new PictureBox
             {
-                Location = new Point(10, 8),
+                Location = new Point(8, 5),
                 Size = new Size(56, 56),
-                BackColor = ColSurfaceAlt,
+                BackColor = Color.White,
                 SizeMode = PictureBoxSizeMode.Zoom
             };
             Image img = AppHelper.GetProductImage(product);
@@ -2119,142 +2415,180 @@ namespace EnvanterSayimApp
 
             Label lblTitle = new Label
             {
-                Text = $"📓 {product.Name} — Numara & Seri No Defteri",
-                Font = new Font("Segoe UI", 12f, FontStyle.Bold),
+                Text = $"💻 {product.Name.ToUpperInvariant()} — " + T("SERİ NO & DURUM TABLOSU", "SERIAL NO & STATUS TABLE"),
+                Font = new Font("Segoe UI", 11.5f, FontStyle.Bold),
                 ForeColor = ColTextDark,
-                Location = new Point(78, 12),
+                Location = new Point(74, 10),
                 AutoSize = true
             };
 
-            Label lblSub = new Label
+            lblSubInfo = new Label
             {
-                Text = $"Oda: {room.Name}   •   Mevcut Sayım Adedi: {room.GetQuantity(product.Id)}",
-                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
-                ForeColor = ColTextMuted,
-                Location = new Point(78, 40),
-                AutoSize = true
-            };
-
-            topInfo.Controls.AddRange(new Control[] { pic, lblTitle, lblSub });
-
-            // Hızlı Seri No / Numara Ekleme Satırı
-            Label lblQuick = new Label
-            {
-                Text = "⚡ Hızlı Numara / Seri No / Zimmet Ekle (Yazıp Enter'a basın):",
+                Text = "",
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                ForeColor = ColAmberText,
-                Location = new Point(18, 98),
+                ForeColor = ColSecondary,
+                Location = new Point(74, 36),
                 AutoSize = true
             };
 
-            txtQuickSerial = new TextBox
+            topInfo.Controls.AddRange(new Control[] { pic, lblTitle, lblSubInfo });
+
+            // Seri No ve Durum Ekleme / Düzeltme Formu
+            Label lblSerialInput = new Label
             {
-                Location = new Point(18, 122),
-                Size = new Size(445, 30),
+                Text = T("SERİ NO:", "SERIAL NO:"),
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = ColTextDark,
+                Location = new Point(18, 90),
+                AutoSize = true
+            };
+
+            txtSerialNo = new TextBox
+            {
+                Location = new Point(18, 112),
+                Size = new Size(235, 30),
                 BackColor = ColBg,
                 ForeColor = ColTextDark,
                 BorderStyle = BorderStyle.FixedSingle,
-                Font = new Font("Segoe UI", 10.5f)
+                Font = new Font("Segoe UI", 10f, FontStyle.Bold)
             };
-            txtQuickSerial.KeyDown += (s, e) =>
+
+            Label lblStatusInput = new Label
+            {
+                Text = T("DURUM (Örn: Aktif, Depoda, Arızalı):", "STATUS (e.g. Active, In Stock, Broken):"),
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = ColTextDark,
+                Location = new Point(265, 90),
+                AutoSize = true
+            };
+
+            txtStatus = new TextBox
+            {
+                Location = new Point(265, 112),
+                Size = new Size(225, 30),
+                BackColor = ColBg,
+                ForeColor = ColTextDark,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Segoe UI", 10f)
+            };
+
+            KeyEventHandler enterHandler = (s, e) =>
             {
                 if (e.KeyCode == Keys.Enter)
                 {
                     e.SuppressKeyPress = true;
-                    AddQuickSerialLine();
+                    SaveSerialRow();
                 }
             };
+            txtSerialNo.KeyDown += enterHandler;
+            txtStatus.KeyDown += enterHandler;
 
-            Button btnAddSerial = new Button
+            btnAddOrUpdate = new Button
             {
-                Text = "+ Deftere Ekle",
-                Location = new Point(472, 120),
-                Size = new Size(134, 32),
-                BackColor = ColBrand,
+                Text = T("+ Tabloya Ekle", "+ Add Row"),
+                Location = new Point(500, 110),
+                Size = new Size(125, 32),
+                BackColor = ColPrimary,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
-            btnAddSerial.FlatAppearance.BorderSize = 0;
-            btnAddSerial.Click += (s, e) => AddQuickSerialLine();
+            btnAddOrUpdate.FlatAppearance.BorderSize = 0;
+            btnAddOrUpdate.Click += (s, e) => SaveSerialRow();
 
-            // Serbest Defter Alanı Başlığı
-            Label lblEditorHeader = new Label
+            btnCancelEdit = new Button
             {
-                Text = "📝 Defter Kayıtları (Her satıra bir Seri No, Numara veya Not yazabilirsiniz):",
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Text = T("İptal", "Cancel"),
+                Location = new Point(630, 110),
+                Size = new Size(56, 32),
+                BackColor = ColSurfaceAlt,
                 ForeColor = ColTextDark,
-                Location = new Point(18, 166),
-                AutoSize = true
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                Visible = false,
+                Cursor = Cursors.Hand
             };
+            btnCancelEdit.FlatAppearance.BorderSize = 0;
+            btnCancelEdit.Click += (s, e) => CancelEditMode();
 
-            lblLineCount = new Label
+            // =================================================================
+            // PAINT ÇİZİMİNDEKİ TABLO BAŞLIĞI: | NO | SERİ NO | DURUM | İŞLEM |
+            // =================================================================
+            Panel tableHeader = new Panel
             {
-                Text = "0 Kayıtlı Satır",
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                ForeColor = ColAmberText,
-                Location = new Point(480, 166),
-                Size = new Size(125, 20),
-                TextAlign = ContentAlignment.MiddleRight
+                Location = new Point(18, 154),
+                Size = new Size(668, 38),
+                BackColor = ColSurfaceAlt
+            };
+            tableHeader.Paint += (s, e) =>
+            {
+                using (Pen p = new Pen(ColBorder, 2))
+                {
+                    e.Graphics.DrawRectangle(p, 1, 1, tableHeader.Width - 2, tableHeader.Height - 2);
+                    e.Graphics.DrawLine(p, 65, 0, 65, tableHeader.Height);
+                    e.Graphics.DrawLine(p, 325, 0, 325, tableHeader.Height);
+                    e.Graphics.DrawLine(p, 535, 0, 535, tableHeader.Height);
+                }
             };
 
-            txtNotebook = new TextBox
+            Label colNo = new Label { Text = "NO", Font = new Font("Segoe UI", 10f, FontStyle.Bold), ForeColor = ColTextDark, Location = new Point(16, 9), AutoSize = true };
+            Label colSerial = new Label { Text = T("SERİ NO", "SERIAL NO"), Font = new Font("Segoe UI", 10f, FontStyle.Bold), ForeColor = ColTextDark, Location = new Point(78, 9), AutoSize = true };
+            Label colStatus = new Label { Text = T("DURUM", "STATUS"), Font = new Font("Segoe UI", 10f, FontStyle.Bold), ForeColor = ColTextDark, Location = new Point(338, 9), AutoSize = true };
+            Label colAct = new Label { Text = T("DÜZELT / SİL", "EDIT / DEL"), Font = new Font("Segoe UI", 9f, FontStyle.Bold), ForeColor = ColTextDark, Location = new Point(545, 10), AutoSize = true };
+
+            tableHeader.Controls.AddRange(new Control[] { colNo, colSerial, colStatus, colAct });
+
+            // Tablo Gövdesi (Satırlar)
+            tableRowsPanel = new SmoothFlowPanel
             {
                 Location = new Point(18, 192),
-                Size = new Size(588, 310),
-                Multiline = true,
-                ScrollBars = ScrollBars.Vertical,
-                AcceptsReturn = true,
+                Size = new Size(668, 345),
+                AutoScroll = true,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
                 BackColor = ColBg,
-                ForeColor = ColTextDark,
-                BorderStyle = BorderStyle.FixedSingle,
-                Font = new Font("Consolas", 11f),
-                Text = (room.GetNotebook(product.Id) ?? "").Replace("\r\n", "\n").Replace("\n", Environment.NewLine)
-            };
-            txtNotebook.TextChanged += (s, e) =>
-            {
-                room.SetNotebook(product.Id, txtNotebook.Text);
-                UpdateLineCounter();
+                BorderStyle = BorderStyle.FixedSingle
             };
 
             // Alt Butonlar
             btnSyncQty = new Button
             {
-                Text = "🔄 Ürün Adedini Defterdeki Satır Sayısına Eşitle",
-                Location = new Point(18, 518),
+                Text = "",
+                Location = new Point(18, 550),
                 Size = new Size(340, 40),
-                BackColor = ColAmberBg,
-                ForeColor = ColAmberText,
+                BackColor = ColSecondary,
+                ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8.8f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
             btnSyncQty.FlatAppearance.BorderSize = 0;
             btnSyncQty.Click += (s, e) =>
             {
-                int count = AppHelper.CountNotebookLines(txtNotebook.Text);
-                room.SetQuantity(product.Id, count);
+                room.SetQuantity(product.Id, serials.Count);
                 AppHelper.SaveStore(store);
-                lblSub.Text = $"Oda: {room.Name}   •   Mevcut Sayım Adedi: {room.GetQuantity(product.Id)}";
-                MessageBox.Show($"\"{product.Name}\" adedi defterdeki kayıt sayısına ({count} adet) eşitlendi.", "Adet Eşitlendi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                UpdateCounters();
+                MessageBox.Show(
+                    T($"\"{product.Name}\" adedi tablodaki seri no sayısına ({serials.Count}) eşitlendi.",
+                      $"\"{product.Name}\" quantity synced to {serials.Count}."),
+                    "OK", MessageBoxButtons.OK, MessageBoxIcon.Information);
             };
 
-            Button btnSaveClose = new Button
+            Button btnClose = new Button
             {
-                Text = "💾 Kaydet ve Kapat",
-                Location = new Point(446, 518),
+                Text = T("💾 Kaydet ve Kapat", "💾 Save & Close"),
+                Location = new Point(526, 550),
                 Size = new Size(160, 40),
-                BackColor = ColBrand,
+                BackColor = ColPrimary,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
-            btnSaveClose.FlatAppearance.BorderSize = 0;
-            btnSaveClose.Click += (s, e) =>
+            btnClose.FlatAppearance.BorderSize = 0;
+            btnClose.Click += (s, e) =>
             {
-                room.SetNotebook(product.Id, txtNotebook.Text);
                 AppHelper.SaveStore(store);
                 this.DialogResult = DialogResult.OK;
                 this.Close();
@@ -2262,45 +2596,194 @@ namespace EnvanterSayimApp
 
             this.Controls.AddRange(new Control[]
             {
-                topInfo, lblQuick, txtQuickSerial, btnAddSerial,
-                lblEditorHeader, lblLineCount, txtNotebook,
-                btnSyncQty, btnSaveClose
+                topInfo, lblSerialInput, txtSerialNo, lblStatusInput, txtStatus,
+                btnAddOrUpdate, btnCancelEdit, tableHeader, tableRowsPanel,
+                btnSyncQty, btnClose
             });
         }
 
-        private void AddQuickSerialLine()
+        private void SaveSerialRow()
         {
-            string val = (txtQuickSerial.Text ?? "").Trim();
-            if (string.IsNullOrEmpty(val)) return;
-
-            int nextNum = AppHelper.CountNotebookLines(txtNotebook.Text) + 1;
-            string lineToAdd = $"#{nextNum} - {val}";
-
-            if (string.IsNullOrWhiteSpace(txtNotebook.Text))
+            string sNo = (txtSerialNo.Text ?? "").Trim();
+            string st = (txtStatus.Text ?? "").Trim();
+            if (string.IsNullOrEmpty(sNo))
             {
-                txtNotebook.Text = lineToAdd;
+                MessageBox.Show(T("Lütfen Seri No girin.", "Please enter a Serial Number."), T("Uyarı", "Warning"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtSerialNo.Focus();
+                return;
+            }
+            if (string.IsNullOrEmpty(st))
+                st = T("Aktif", "Active");
+
+            if (editingSerialId != null)
+            {
+                var existing = serials.FirstOrDefault(x => x.Id == editingSerialId);
+                if (existing != null)
+                {
+                    existing.SerialNo = sNo;
+                    existing.Status = st;
+                }
+                CancelEditMode();
             }
             else
             {
-                txtNotebook.AppendText(Environment.NewLine + lineToAdd);
+                serials.Add(new SerialRecord
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    SerialNo = sNo,
+                    Status = st
+                });
+                txtSerialNo.Text = "";
+                txtStatus.Text = "";
+                txtSerialNo.Focus();
             }
 
-            txtQuickSerial.Text = "";
-            txtQuickSerial.Focus();
-            room.SetNotebook(product.Id, txtNotebook.Text);
-            UpdateLineCounter();
+            AppHelper.SaveStore(store);
+            RenderTableRows();
         }
 
-        private void UpdateLineCounter()
+        private void StartEditRow(SerialRecord rec)
         {
-            int count = AppHelper.CountNotebookLines(txtNotebook.Text);
-            lblLineCount.Text = $"{count} Kayıtlı Satır";
-            btnSyncQty.Text = $"🔄 Ürün Adedini Satır Sayısına Eşitle ({count})";
+            editingSerialId = rec.Id;
+            txtSerialNo.Text = rec.SerialNo;
+            txtStatus.Text = rec.Status;
+            btnAddOrUpdate.Text = T("💾 Güncelle", "💾 Update");
+            btnAddOrUpdate.BackColor = ColSecondary;
+            btnCancelEdit.Visible = true;
+            txtSerialNo.Focus();
+            RenderTableRows();
+        }
+
+        private void CancelEditMode()
+        {
+            editingSerialId = null;
+            txtSerialNo.Text = "";
+            txtStatus.Text = "";
+            btnAddOrUpdate.Text = T("+ Tabloya Ekle", "+ Add Row");
+            btnAddOrUpdate.BackColor = ColPrimary;
+            btnCancelEdit.Visible = false;
+            RenderTableRows();
+        }
+
+        private void DeleteRow(SerialRecord rec)
+        {
+            serials.RemoveAll(x => x.Id == rec.Id);
+            if (editingSerialId == rec.Id)
+                CancelEditMode();
+            AppHelper.SaveStore(store);
+            RenderTableRows();
+        }
+
+        private void UpdateCounters()
+        {
+            lblSubInfo.Text = IsEN
+                ? $"Room: {room.Name}   •   Room Quantity: {room.GetQuantity(product.Id)}   •   Recorded Serials: {serials.Count}"
+                : $"Oda: {room.Name}   •   Oda Sayım Adedi: {room.GetQuantity(product.Id)}   •   Tablodaki Seri No: {serials.Count}";
+            btnSyncQty.Text = IsEN
+                ? $"🔄 Sync Item Quantity to Serial Count ({serials.Count})"
+                : $"🔄 Ürün Adedini Seri No Sayısına Eşitle ({serials.Count})";
+        }
+
+        private void RenderTableRows()
+        {
+            UpdateCounters();
+            tableRowsPanel.SuspendLayout();
+            foreach (Control c in tableRowsPanel.Controls) c.Dispose();
+            tableRowsPanel.Controls.Clear();
+
+            for (int i = 0; i < serials.Count; i++)
+            {
+                var rec = serials[i];
+                int rowNo = i + 1;
+                bool isEditingThis = (rec.Id == editingSerialId);
+
+                Panel row = new Panel
+                {
+                    Size = new Size(644, 42),
+                    BackColor = isEditingThis ? AppHelper.GetSecondarySoftBg(store.ColorTheme, store.DarkMode) : ColCard,
+                    Margin = new Padding(0)
+                };
+                row.Paint += (s, e) =>
+                {
+                    using (Pen p = new Pen(ColBorder, 1))
+                    {
+                        e.Graphics.DrawLine(p, 0, row.Height - 1, row.Width, row.Height - 1);
+                        e.Graphics.DrawLine(p, 65, 0, 65, row.Height);
+                        e.Graphics.DrawLine(p, 325, 0, 325, row.Height);
+                        e.Graphics.DrawLine(p, 535, 0, 535, row.Height);
+                    }
+                };
+
+                Label lblNo = new Label
+                {
+                    Text = rowNo.ToString(),
+                    Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+                    ForeColor = ColSecondary,
+                    Location = new Point(6, 10),
+                    Size = new Size(52, 22),
+                    TextAlign = ContentAlignment.MiddleCenter
+                };
+
+                Label lblSerial = new Label
+                {
+                    Text = rec.SerialNo,
+                    Font = new Font("Consolas", 10.5f, FontStyle.Bold),
+                    ForeColor = ColTextDark,
+                    Location = new Point(74, 11),
+                    Size = new Size(242, 22),
+                    AutoEllipsis = true
+                };
+
+                Label lblStatus = new Label
+                {
+                    Text = rec.Status,
+                    Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
+                    ForeColor = ColTextDark,
+                    Location = new Point(334, 10),
+                    Size = new Size(192, 22),
+                    AutoEllipsis = true
+                };
+
+                // ✏️ DÜZELT Butonu
+                Button btnEdit = new Button
+                {
+                    Text = T("✏️ Düzelt", "✏️ Edit"),
+                    Location = new Point(542, 7),
+                    Size = new Size(62, 28),
+                    BackColor = ColSurfaceAlt,
+                    ForeColor = ColTextDark,
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 7.8f, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                btnEdit.FlatAppearance.BorderSize = 0;
+                btnEdit.Click += (s, e) => StartEditRow(rec);
+
+                // 🗑️ SİL Butonu
+                Button btnDel = new Button
+                {
+                    Text = "🗑️",
+                    Location = new Point(608, 7),
+                    Size = new Size(30, 28),
+                    BackColor = ColDangerBg,
+                    ForeColor = ColDanger,
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                btnDel.FlatAppearance.BorderSize = 0;
+                btnDel.Click += (s, e) => DeleteRow(rec);
+
+                row.Controls.AddRange(new Control[] { lblNo, lblSerial, lblStatus, btnEdit, btnDel });
+                tableRowsPanel.Controls.Add(row);
+            }
+
+            tableRowsPanel.ResumeLayout();
         }
     }
 
     // =========================================================================
-    // ODAYA ÜRÜN EKLEME PENCERESİ (KARANLIK MOD UYUMLU)
+    // ODAYA ÜRÜN EKLEME PENCERESİ
     // =========================================================================
     public class AddProductToRoomDialog : Form
     {
@@ -2314,9 +2797,12 @@ namespace EnvanterSayimApp
         private PictureBox picNewPreview;
         private string newPhotoBase64 = null;
 
-        private Color ColBrand => store.DarkMode ? Color.FromArgb(99, 102, 241) : Color.FromArgb(79, 70, 229);
-        private Color ColBrandLight => store.DarkMode ? Color.FromArgb(49, 46, 129) : Color.FromArgb(238, 242, 255);
-        private Color ColBrandText => store.DarkMode ? Color.FromArgb(199, 210, 254) : Color.FromArgb(79, 70, 229);
+        private bool IsEN => store.Language == "en";
+        private string T(string tr, string en) => IsEN ? en : tr;
+
+        private Color ColPrimary => AppHelper.GetPrimaryColor(store.ColorTheme, store.DarkMode);
+        private Color ColSecondary => AppHelper.GetSecondaryColor(store.ColorTheme, store.DarkMode);
+        private Color ColPrimarySoft => AppHelper.GetPrimarySoftBg(store.ColorTheme, store.DarkMode);
         private Color ColBg => store.DarkMode ? Color.FromArgb(15, 23, 42) : Color.FromArgb(248, 250, 252);
         private Color ColCard => store.DarkMode ? Color.FromArgb(30, 41, 59) : Color.White;
         private Color ColSurfaceAlt => store.DarkMode ? Color.FromArgb(51, 65, 85) : Color.FromArgb(241, 245, 249);
@@ -2329,7 +2815,7 @@ namespace EnvanterSayimApp
             this.store = store;
             this.currentRoom = currentRoom;
 
-            this.Text = $"Odaya Ürün Ekle — {currentRoom.Name}";
+            this.Text = T($"Odaya Ürün Ekle — {currentRoom.Name}", $"Add Product to Room — {currentRoom.Name}");
             this.Size = new Size(680, 700);
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -2353,7 +2839,7 @@ namespace EnvanterSayimApp
         {
             Label lblHeader = new Label
             {
-                Text = "1) Daha Önce Eklenmiş Ürünlerden Seçin (Diğer Odalardan / Havuzdan)",
+                Text = T("1) Daha Önce Eklenmiş Ürünlerden Seçin", "1) Select from Previously Added Products"),
                 Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
                 ForeColor = ColTextDark,
                 Location = new Point(18, 14),
@@ -2362,7 +2848,7 @@ namespace EnvanterSayimApp
 
             Label lblSearch = new Label
             {
-                Text = "🔍 Kayıtlı Ürünlerde Ara:",
+                Text = T("🔍 Ürün Ara:", "🔍 Search:"),
                 ForeColor = ColTextMuted,
                 Location = new Point(18, 46),
                 AutoSize = true
@@ -2370,8 +2856,8 @@ namespace EnvanterSayimApp
 
             txtSearch = new TextBox
             {
-                Location = new Point(175, 43),
-                Size = new Size(465, 28),
+                Location = new Point(135, 43),
+                Size = new Size(505, 28),
                 BackColor = ColBg,
                 ForeColor = ColTextDark,
                 BorderStyle = BorderStyle.FixedSingle,
@@ -2380,9 +2866,7 @@ namespace EnvanterSayimApp
             txtSearch.TextChanged += (s, e) =>
             {
                 if (!string.IsNullOrWhiteSpace(txtSearch.Text))
-                {
                     txtNewName.Text = txtSearch.Text.Trim();
-                }
                 RenderExistingProductsList();
             };
 
@@ -2401,27 +2885,22 @@ namespace EnvanterSayimApp
             {
                 Location = new Point(18, 432),
                 Size = new Size(624, 210),
-                BackColor = ColBrandLight
-            };
-            newProdBox.Paint += (s, e) =>
-            {
-                using (Pen p = new Pen(ColBrand, 1))
-                    e.Graphics.DrawRectangle(p, 0, 0, newProdBox.Width - 1, newProdBox.Height - 1);
+                BackColor = ColPrimarySoft
             };
 
             Label lblNewTitle = new Label
             {
-                Text = "2) Listede Yok mu? Yeni Ürün Oluştur ve Bu Odaya Ekle",
+                Text = T("2) Listede Yok mu? Yeni Ürün Oluştur ve Bu Odaya Ekle", "2) Not in List? Create New Product & Add to Room"),
                 Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
-                ForeColor = ColBrandText,
+                ForeColor = ColTextDark,
                 Location = new Point(14, 10),
                 AutoSize = true
             };
 
-            Label lblNewName = new Label { Text = "Yeni Ürün Adı *", Location = new Point(14, 42), AutoSize = true, ForeColor = ColTextDark, Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
+            Label lblNewName = new Label { Text = T("Yeni Ürün Adı *", "New Product Name *"), Location = new Point(14, 42), AutoSize = true, ForeColor = ColTextDark, Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
             txtNewName = new TextBox { Location = new Point(14, 64), Size = new Size(340, 28), BackColor = ColBg, ForeColor = ColTextDark, BorderStyle = BorderStyle.FixedSingle, Font = new Font("Segoe UI", 10f) };
 
-            Label lblNewQty = new Label { Text = "Başlangıç Adedi", Location = new Point(370, 42), AutoSize = true, ForeColor = ColTextDark, Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
+            Label lblNewQty = new Label { Text = T("Başlangıç Adedi", "Initial Qty"), Location = new Point(370, 42), AutoSize = true, ForeColor = ColTextDark, Font = new Font("Segoe UI", 9f, FontStyle.Bold) };
             numNewQty = new NumericUpDown
             {
                 Location = new Point(370, 64),
@@ -2438,29 +2917,28 @@ namespace EnvanterSayimApp
             {
                 Location = new Point(505, 22),
                 Size = new Size(100, 100),
-                BackColor = ColCard,
+                BackColor = Color.White,
                 SizeMode = PictureBoxSizeMode.Zoom,
                 BorderStyle = BorderStyle.FixedSingle
             };
 
             Button btnPickPhoto = new Button
             {
-                Text = "📷 Ürün Fotoğrafı Seç (İsteğe Bağlı)",
+                Text = T("📷 Ürün Fotoğrafı Seç", "📷 Choose Photo"),
                 Location = new Point(14, 104),
                 Size = new Size(255, 34),
                 BackColor = ColCard,
-                ForeColor = ColBrandText,
+                ForeColor = ColTextDark,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 8.8f, FontStyle.Bold),
                 Cursor = Cursors.Hand
             };
-            btnPickPhoto.FlatAppearance.BorderColor = ColBrand;
+            btnPickPhoto.FlatAppearance.BorderColor = ColPrimary;
             btnPickPhoto.Click += (s, e) =>
             {
                 using (OpenFileDialog ofd = new OpenFileDialog())
                 {
-                    ofd.Title = "Ürün Fotoğrafı Seçin";
-                    ofd.Filter = "Görsel Dosyaları|*.jpg;*.jpeg;*.png;*.bmp;*.gif";
+                    ofd.Filter = "Images|*.jpg;*.jpeg;*.png;*.bmp;*.gif";
                     if (ofd.ShowDialog(this) == DialogResult.OK)
                     {
                         try
@@ -2474,7 +2952,7 @@ namespace EnvanterSayimApp
                         }
                         catch (Exception ex)
                         {
-                            MessageBox.Show("Fotoğraf yüklenemedi: " + ex.Message);
+                            MessageBox.Show(ex.Message);
                         }
                     }
                 }
@@ -2482,10 +2960,10 @@ namespace EnvanterSayimApp
 
             Button btnCreateAndAdd = new Button
             {
-                Text = "+ Yeni Ürünü Oluştur ve Odaya Ekle",
+                Text = T("+ Yeni Ürünü Oluştur ve Odaya Ekle", "+ Create New Product & Add to Room"),
                 Location = new Point(14, 152),
                 Size = new Size(595, 42),
-                BackColor = ColBrand,
+                BackColor = ColPrimary,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 10f, FontStyle.Bold),
@@ -2524,19 +3002,15 @@ namespace EnvanterSayimApp
                     .Select(r => $"{r.Name} ({r.GetQuantity(prod.Id)})")
                     .ToList();
 
-                Color rowBg = inThisRoom
-                    ? (store.DarkMode ? Color.FromArgb(6, 78, 59) : Color.FromArgb(236, 253, 245))
-                    : ColCard;
-
                 Panel row = new Panel
                 {
                     Size = new Size(594, 64),
-                    BackColor = rowBg,
+                    BackColor = ColCard,
                     Margin = new Padding(4, 3, 4, 3)
                 };
                 row.Paint += (s, e) =>
                 {
-                    using (Pen p = new Pen(ColBorder, 1))
+                    using (Pen p = new Pen(inThisRoom ? ColSecondary : ColBorder, 1))
                         e.Graphics.DrawRectangle(p, 0, 0, row.Width - 1, row.Height - 1);
                 };
 
@@ -2544,7 +3018,7 @@ namespace EnvanterSayimApp
                 {
                     Location = new Point(8, 7),
                     Size = new Size(50, 50),
-                    BackColor = ColSurfaceAlt,
+                    BackColor = Color.White,
                     SizeMode = PictureBoxSizeMode.Zoom
                 };
                 Image img = AppHelper.GetProductImage(prod);
@@ -2561,18 +3035,16 @@ namespace EnvanterSayimApp
                 };
 
                 string subInfo = otherRooms.Count > 0
-                    ? "Diğer odalar: " + string.Join(", ", otherRooms)
-                    : "Başka odada henüz yok";
+                    ? T("Diğer odalar: ", "Other rooms: ") + string.Join(", ", otherRooms)
+                    : T("Başka odada yok", "Not in other rooms");
                 if (inThisRoom)
-                    subInfo = $"Bu odada mevcut ({qtyInThisRoom} adet)  •  " + subInfo;
+                    subInfo = T($"Odada mevcut ({qtyInThisRoom}) • ", $"In room ({qtyInThisRoom}) • ") + subInfo;
 
                 Label lblSub = new Label
                 {
                     Text = subInfo,
                     Font = new Font("Segoe UI", 8.2f),
-                    ForeColor = inThisRoom
-                        ? (store.DarkMode ? Color.FromArgb(110, 231, 183) : Color.FromArgb(5, 150, 105))
-                        : ColTextMuted,
+                    ForeColor = inThisRoom ? ColSecondary : ColTextMuted,
                     Location = new Point(68, 34),
                     Size = new Size(350, 18),
                     AutoEllipsis = true
@@ -2580,10 +3052,10 @@ namespace EnvanterSayimApp
 
                 Button btnPick = new Button
                 {
-                    Text = inThisRoom ? "+ 1 Adet Ekle" : "+ Odaya Ekle",
+                    Text = inThisRoom ? T("+ 1 Ekle", "+ Add 1") : T("+ Odaya Ekle", "+ Add to Room"),
                     Location = new Point(445, 14),
                     Size = new Size(135, 36),
-                    BackColor = inThisRoom ? Color.FromArgb(16, 185, 129) : ColBrand,
+                    BackColor = inThisRoom ? ColSecondary : ColPrimary,
                     ForeColor = Color.White,
                     FlatStyle = FlatStyle.Flat,
                     Font = new Font("Segoe UI", 9f, FontStyle.Bold),
@@ -2608,21 +3080,14 @@ namespace EnvanterSayimApp
         private void CreateNewProductAndAddToRoom()
         {
             string name = (txtNewName.Text ?? "").Trim();
-            if (string.IsNullOrEmpty(name))
-            {
-                MessageBox.Show("Lütfen yeni ürünün adını girin.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+            if (string.IsNullOrEmpty(name)) return;
 
             int startQty = (int)numNewQty.Value;
-
             var existing = store.Products.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (existing != null)
             {
                 if (!string.IsNullOrEmpty(newPhotoBase64) && string.IsNullOrEmpty(existing.PhotoBase64))
-                {
                     existing.PhotoBase64 = newPhotoBase64;
-                }
                 int current = currentRoom.GetQuantity(existing.Id);
                 currentRoom.SetQuantity(existing.Id, current + startQty);
             }
@@ -2644,9 +3109,6 @@ namespace EnvanterSayimApp
         }
     }
 
-    // =========================================================================
-    // PROGRAM GİRİŞ NOKTASI
-    // =========================================================================
     static class Program
     {
         [DllImport("user32.dll")]
