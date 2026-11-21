@@ -1,7 +1,8 @@
-const CACHE_NAME = 'envanter-sayim-v2';
+const CACHE_NAME = 'envanter-sayim-v3';
 const ASSETS = [
   './',
   './index.html',
+  './seed_data.js',
   './manifest.json',
   './icon.svg'
 ];

@@ -13,7 +13,7 @@ using System.Xml.Serialization;
 namespace EnvanterSayimApp
 {
     // =========================================================================
-    // VERİ MODELLERİ (XML İLE OTOMATİK KAYIT & FOTOĞRAF DESTEKLİ)
+    // VERİ MODELLERİ (XML İLE OTOMATİK KAYIT, FOTOĞRAF VE DEFTER DESTEKLİ)
     // =========================================================================
     [Serializable]
     public class ProductItem
@@ -21,6 +21,7 @@ namespace EnvanterSayimApp
         public string Id { get; set; }
         public string Name { get; set; }
         public string PhotoBase64 { get; set; }
+        public string Notebook { get; set; } = "";
     }
 
     [Serializable]
@@ -28,6 +29,7 @@ namespace EnvanterSayimApp
     {
         public string ProductId { get; set; }
         public int Quantity { get; set; }
+        public string Notebook { get; set; } = "";
     }
 
     [Serializable]
@@ -42,6 +44,25 @@ namespace EnvanterSayimApp
         {
             var entry = Items.FirstOrDefault(x => x.ProductId == productId);
             return entry != null ? entry.Quantity : 0;
+        }
+
+        public string GetNotebook(string productId)
+        {
+            var entry = Items.FirstOrDefault(x => x.ProductId == productId);
+            return entry != null ? (entry.Notebook ?? "") : "";
+        }
+
+        public void SetNotebook(string productId, string notebook)
+        {
+            var entry = Items.FirstOrDefault(x => x.ProductId == productId);
+            if (entry != null)
+            {
+                entry.Notebook = notebook ?? "";
+            }
+            else
+            {
+                Items.Add(new RoomProductEntry { ProductId = productId, Quantity = 1, Notebook = notebook ?? "" });
+            }
         }
 
         public bool HasProduct(string productId)
@@ -59,7 +80,7 @@ namespace EnvanterSayimApp
             }
             else
             {
-                Items.Add(new RoomProductEntry { ProductId = productId, Quantity = qty });
+                Items.Add(new RoomProductEntry { ProductId = productId, Quantity = qty, Notebook = "" });
             }
         }
 
@@ -101,9 +122,7 @@ namespace EnvanterSayimApp
             try
             {
                 int useDark = isDark ? 1 : 0;
-                // DWMWA_USE_IMMERSIVE_DARK_MODE = 20 (Windows 10 20H1+ & Windows 11)
                 DwmSetWindowAttribute(form.Handle, 20, ref useDark, sizeof(int));
-                // Fallback attribute 19 for older Windows 10 builds
                 DwmSetWindowAttribute(form.Handle, 19, ref useDark, sizeof(int));
             }
             catch { }
@@ -118,6 +137,27 @@ namespace EnvanterSayimApp
                 string dir = AppDomain.CurrentDomain.BaseDirectory;
                 return Path.Combine(dir, "envanter_verisi.xml");
             }
+        }
+
+        public static int CountNotebookLines(string notebook)
+        {
+            if (string.IsNullOrWhiteSpace(notebook)) return 0;
+            return notebook
+                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Count(line => !string.IsNullOrWhiteSpace(line));
+        }
+
+        public static string GetNotebookPreview(string notebook, int maxLen = 70)
+        {
+            if (string.IsNullOrWhiteSpace(notebook)) return "";
+            var lines = notebook
+                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(l => l.Trim())
+                .Where(l => l.Length > 0)
+                .ToList();
+            if (lines.Count == 0) return "";
+            string joined = string.Join(" • ", lines);
+            return joined.Length > maxLen ? joined.Substring(0, maxLen) + "..." : joined;
         }
 
         public static void ClearImageCache(string productId = null)
@@ -160,7 +200,7 @@ namespace EnvanterSayimApp
             }
         }
 
-        public static string LoadAndResizeImageToBase64(string filePath, int maxSize = 420)
+        public static string LoadAndResizeImageToBase64(string filePath, int maxSize = 400)
         {
             using (Image src = Image.FromFile(filePath))
             {
@@ -221,20 +261,23 @@ namespace EnvanterSayimApp
                     using (StreamReader sr = new StreamReader(DataFilePath, Encoding.UTF8))
                     {
                         var loaded = (InventoryStore)serializer.Deserialize(sr);
-                        if (loaded != null) return loaded;
+                        if (loaded != null && (loaded.Rooms.Count > 0 || loaded.Products.Count > 0))
+                            return loaded;
                     }
                 }
             }
             catch
             {
-                // Bozuk dosya durumunda temiz başlat
+                // Varsayılan inventory odası ve ürünleri yükle
             }
-            return new InventoryStore { ViewMode = "list", DarkMode = true };
+            var initial = SeedData.CreateInitialStore(true);
+            SaveStore(initial);
+            return initial;
         }
     }
 
     // =========================================================================
-    // ANA MASAÜSTÜ PENCERESİ (MAIN FORM) - KARANLIK & AÇIK MOD DESTEKLİ
+    // ANA MASAÜSTÜ PENCERESİ (MAIN FORM) - KARANLIK MOD & DEFTER DESTEKLİ
     // =========================================================================
     public class MainForm : Form
     {
@@ -254,6 +297,8 @@ namespace EnvanterSayimApp
         private Color ColTextMuted => store.DarkMode ? Color.FromArgb(148, 163, 184) : Color.FromArgb(100, 116, 139);
         private Color ColBorder => store.DarkMode ? Color.FromArgb(51, 65, 85) : Color.FromArgb(226, 232, 240);
         private Color ColEmerald => store.DarkMode ? Color.FromArgb(52, 211, 153) : Color.FromArgb(16, 185, 129);
+        private Color ColAmberBg => store.DarkMode ? Color.FromArgb(120, 53, 15) : Color.FromArgb(254, 243, 199);
+        private Color ColAmberText => store.DarkMode ? Color.FromArgb(253, 230, 138) : Color.FromArgb(180, 83, 9);
         private Color ColDanger => store.DarkMode ? Color.FromArgb(251, 113, 133) : Color.FromArgb(225, 29, 72);
         private Color ColDangerBg => store.DarkMode ? Color.FromArgb(76, 5, 25) : Color.FromArgb(254, 226, 226);
 
@@ -292,7 +337,7 @@ namespace EnvanterSayimApp
         public MainForm()
         {
             this.Text = "Envanter & Oda Sayım Uygulaması";
-            this.Size = new Size(1260, 790);
+            this.Size = new Size(1280, 800);
             this.MinimumSize = new Size(980, 620);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
@@ -328,7 +373,6 @@ namespace EnvanterSayimApp
                     e.Graphics.DrawLine(p, 0, topBar.Height - 1, topBar.Width, topBar.Height - 1);
             };
 
-            // Sol Başlık
             lblLogo = new Label
             {
                 Text = "📦 Envanter & Oda Sayım",
@@ -338,7 +382,6 @@ namespace EnvanterSayimApp
             };
             topBar.Controls.Add(lblLogo);
 
-            // Orta Sekme Butonları
             btnTabRooms = CreateTabButton("🚪 Odalar ve Sayım", 270);
             btnTabRooms.Click += (s, e) => SwitchTab("rooms");
 
@@ -354,7 +397,6 @@ namespace EnvanterSayimApp
             topBar.Controls.Add(btnTabCatalog);
             topBar.Controls.Add(btnTabSummary);
 
-            // Sağ Aksiyon Butonları
             FlowLayoutPanel rightActions = new FlowLayoutPanel
             {
                 Dock = DockStyle.Right,
@@ -888,7 +930,10 @@ namespace EnvanterSayimApp
                         Product = store.Products.FirstOrDefault(p => p.Id == entry.ProductId),
                         Entry = entry
                     })
-                    .Where(x => x.Product != null && x.Product.Name.ToLowerInvariant().Contains(query))
+                    .Where(x => x.Product != null && (
+                        x.Product.Name.ToLowerInvariant().Contains(query) ||
+                        (!string.IsNullOrEmpty(x.Entry.Notebook) && x.Entry.Notebook.ToLowerInvariant().Contains(query))
+                    ))
                     .ToList();
 
                 if (roomProducts.Count == 0)
@@ -983,14 +1028,18 @@ namespace EnvanterSayimApp
         }
 
         // =====================================================================
-        // GÖRÜNÜM 1: ODA İÇİ "DÜMDÜZ LİSTE" KARTI (+ / - / ELLE SAYI GİRİŞİ)
+        // GÖRÜNÜM 1: ODA İÇİ "DÜMDÜZ LİSTE" KARTI (+ / - / INPUT + DEFTER)
         // =====================================================================
         private Control CreateRoomProductListCard(RoomData room, ProductItem product, int quantity, int width)
         {
+            string notebookText = room.GetNotebook(product.Id);
+            int noteLines = AppHelper.CountNotebookLines(notebookText);
+            string notePreview = AppHelper.GetNotebookPreview(notebookText, 85);
+
             Panel card = new Panel
             {
                 Tag = "list-card",
-                Size = new Size(width, 82),
+                Size = new Size(width, noteLines > 0 ? 96 : 84),
                 BackColor = ColCard,
                 Margin = new Padding(2, 4, 2, 4)
             };
@@ -1000,7 +1049,7 @@ namespace EnvanterSayimApp
                     e.Graphics.DrawRectangle(p, 0, 0, card.Width - 1, card.Height - 1);
             };
 
-            PictureBox pic = CreateProductPictureBox(product, new Size(62, 62), new Point(10, 10));
+            PictureBox pic = CreateProductPictureBox(product, new Size(64, 64), new Point(10, 10));
             card.Controls.Add(pic);
 
             Label lblName = new Label
@@ -1008,16 +1057,50 @@ namespace EnvanterSayimApp
                 Text = product.Name,
                 Font = new Font("Segoe UI", 11.5f, FontStyle.Bold),
                 ForeColor = ColTextDark,
-                Location = new Point(84, 14),
-                Size = new Size(width - 330, 26),
+                Location = new Point(84, 10),
+                Size = new Size(width - 330, 24),
                 AutoEllipsis = true
             };
+            card.Controls.Add(lblName);
+
+            int btnY = 40;
+            if (noteLines > 0)
+            {
+                Label lblNotePreview = new Label
+                {
+                    Text = "📓 Seri No / Defter: " + notePreview,
+                    Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                    ForeColor = ColAmberText,
+                    Location = new Point(84, 34),
+                    Size = new Size(width - 310, 18),
+                    AutoEllipsis = true,
+                    Cursor = Cursors.Hand
+                };
+                lblNotePreview.Click += (s, e) => OpenNotebookDialog(room, product);
+                card.Controls.Add(lblNotePreview);
+                btnY = 58;
+            }
+
+            // 📓 DEFTER (SERİ NO / NUMARA) BUTONU
+            Button btnNotebook = new Button
+            {
+                Text = noteLines > 0 ? $"📓 Defter / Seri No ({noteLines})" : "📓 Defter / Seri No Yaz",
+                Location = new Point(84, btnY),
+                Size = new Size(165, 28),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = noteLines > 0 ? ColAmberBg : ColBrandLight,
+                ForeColor = noteLines > 0 ? ColAmberText : ColBrandText,
+                Font = new Font("Segoe UI", 8.2f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnNotebook.FlatAppearance.BorderSize = 0;
+            btnNotebook.Click += (s, e) => OpenNotebookDialog(room, product);
 
             Button btnEditProd = new Button
             {
-                Text = "📷 Fotoğraf / Ad Düzenle",
-                Location = new Point(84, 44),
-                Size = new Size(155, 26),
+                Text = "📷 Düzenle",
+                Location = new Point(256, btnY),
+                Size = new Size(92, 28),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = ColSurfaceAlt,
                 ForeColor = ColTextMuted,
@@ -1029,9 +1112,9 @@ namespace EnvanterSayimApp
 
             Button btnRemoveFromRoom = new Button
             {
-                Text = "🗑️ Odadan Kaldır",
-                Location = new Point(246, 44),
-                Size = new Size(118, 26),
+                Text = "🗑️ Kaldır",
+                Location = new Point(354, btnY),
+                Size = new Size(82, 28),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = ColDangerBg,
                 ForeColor = ColDanger,
@@ -1041,15 +1124,15 @@ namespace EnvanterSayimApp
             btnRemoveFromRoom.FlatAppearance.BorderSize = 0;
             btnRemoveFromRoom.Click += (s, e) => RemoveProductFromCurrentRoom(room, product);
 
-            Panel qtyControlBox = CreateQuantityControlBar(room, product, quantity, new Point(width - 196, 20));
+            Panel qtyControlBox = CreateQuantityControlBar(room, product, quantity, new Point(width - 196, (card.Height - 42) / 2));
 
             card.Resize += (s, e) =>
             {
                 lblName.Width = Math.Max(150, card.Width - 310);
-                qtyControlBox.Location = new Point(card.Width - 196, 20);
+                qtyControlBox.Location = new Point(card.Width - 196, (card.Height - 42) / 2);
             };
 
-            card.Controls.Add(lblName);
+            card.Controls.Add(btnNotebook);
             card.Controls.Add(btnEditProd);
             card.Controls.Add(btnRemoveFromRoom);
             card.Controls.Add(qtyControlBox);
@@ -1058,13 +1141,16 @@ namespace EnvanterSayimApp
         }
 
         // =====================================================================
-        // GÖRÜNÜM 2: ODA İÇİ "KARE KARE (GRID)" KARTI (+ / - / ELLE SAYI GİRİŞİ)
+        // GÖRÜNÜM 2: ODA İÇİ "KARE KARE (GRID)" KARTI (+ / - / INPUT + DEFTER)
         // =====================================================================
         private Control CreateRoomProductGridCard(RoomData room, ProductItem product, int quantity)
         {
+            string notebookText = room.GetNotebook(product.Id);
+            int noteLines = AppHelper.CountNotebookLines(notebookText);
+
             Panel card = new Panel
             {
-                Size = new Size(218, 276),
+                Size = new Size(220, 304),
                 BackColor = ColCard,
                 Margin = new Padding(6)
             };
@@ -1074,7 +1160,7 @@ namespace EnvanterSayimApp
                     e.Graphics.DrawRectangle(p, 0, 0, card.Width - 1, card.Height - 1);
             };
 
-            PictureBox pic = CreateProductPictureBox(product, new Size(198, 145), new Point(10, 10));
+            PictureBox pic = CreateProductPictureBox(product, new Size(200, 140), new Point(10, 10));
             card.Controls.Add(pic);
 
             Label lblName = new Label
@@ -1082,16 +1168,31 @@ namespace EnvanterSayimApp
                 Text = product.Name,
                 Font = new Font("Segoe UI", 10f, FontStyle.Bold),
                 ForeColor = ColTextDark,
-                Location = new Point(10, 160),
-                Size = new Size(198, 38),
+                Location = new Point(10, 155),
+                Size = new Size(200, 24),
                 AutoEllipsis = true
             };
+
+            // 📓 DEFTER (SERİ NO / NUMARA) TAM GENİŞLİK BUTONU
+            Button btnNotebook = new Button
+            {
+                Text = noteLines > 0 ? $"📓 Defter / Seri No ({noteLines})" : "📓 Defter / Seri No Yaz",
+                Location = new Point(10, 182),
+                Size = new Size(200, 28),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = noteLines > 0 ? ColAmberBg : ColBrandLight,
+                ForeColor = noteLines > 0 ? ColAmberText : ColBrandText,
+                Font = new Font("Segoe UI", 8.2f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnNotebook.FlatAppearance.BorderSize = 0;
+            btnNotebook.Click += (s, e) => OpenNotebookDialog(room, product);
 
             Button btnEdit = new Button
             {
                 Text = "📷 Düzenle",
-                Location = new Point(10, 198),
-                Size = new Size(96, 24),
+                Location = new Point(10, 215),
+                Size = new Size(97, 25),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = ColSurfaceAlt,
                 ForeColor = ColTextMuted,
@@ -1104,8 +1205,8 @@ namespace EnvanterSayimApp
             Button btnDel = new Button
             {
                 Text = "🗑️ Kaldır",
-                Location = new Point(112, 198),
-                Size = new Size(96, 24),
+                Location = new Point(113, 215),
+                Size = new Size(97, 25),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = ColDangerBg,
                 ForeColor = ColDanger,
@@ -1115,9 +1216,10 @@ namespace EnvanterSayimApp
             btnDel.FlatAppearance.BorderSize = 0;
             btnDel.Click += (s, e) => RemoveProductFromCurrentRoom(room, product);
 
-            Panel qtyBar = CreateQuantityControlBar(room, product, quantity, new Point(19, 228));
+            Panel qtyBar = CreateQuantityControlBar(room, product, quantity, new Point(20, 248));
 
             card.Controls.Add(lblName);
+            card.Controls.Add(btnNotebook);
             card.Controls.Add(btnEdit);
             card.Controls.Add(btnDel);
             card.Controls.Add(qtyBar);
@@ -1287,10 +1389,21 @@ namespace EnvanterSayimApp
         // =====================================================================
         private Control CreateCatalogSummaryCardList(ProductItem prod, int width, bool isCatalogMode)
         {
+            int totalCount = store.Rooms.Sum(r => r.GetQuantity(prod.Id));
+            var roomsBreakdown = store.Rooms
+                .Where(r => r.GetQuantity(prod.Id) > 0)
+                .Select(r => $"{r.Name}: {r.GetQuantity(prod.Id)}")
+                .ToList();
+
+            var notebooksInRooms = store.Rooms
+                .Where(r => !string.IsNullOrWhiteSpace(r.GetNotebook(prod.Id)))
+                .Select(r => $"{r.Name} [{AppHelper.GetNotebookPreview(r.GetNotebook(prod.Id), 55)}]")
+                .ToList();
+
             Panel card = new Panel
             {
                 Tag = "list-card",
-                Size = new Size(width, 82),
+                Size = new Size(width, notebooksInRooms.Count > 0 ? 96 : 82),
                 BackColor = ColCard,
                 Margin = new Padding(2, 4, 2, 4)
             };
@@ -1303,12 +1416,6 @@ namespace EnvanterSayimApp
             PictureBox pic = CreateProductPictureBox(prod, new Size(62, 62), new Point(10, 10));
             card.Controls.Add(pic);
 
-            int totalCount = store.Rooms.Sum(r => r.GetQuantity(prod.Id));
-            var roomsBreakdown = store.Rooms
-                .Where(r => r.GetQuantity(prod.Id) > 0)
-                .Select(r => $"{r.Name}: {r.GetQuantity(prod.Id)}")
-                .ToList();
-
             string breakdownText = roomsBreakdown.Count > 0
                 ? "Oda Dağılımı: " + string.Join("  |  ", roomsBreakdown)
                 : "Henüz hiçbir odada sayılmadı (0 adet)";
@@ -1318,7 +1425,7 @@ namespace EnvanterSayimApp
                 Text = prod.Name,
                 Font = new Font("Segoe UI", 11.5f, FontStyle.Bold),
                 ForeColor = ColTextDark,
-                Location = new Point(84, 14),
+                Location = new Point(84, 12),
                 Size = new Size(width - 330, 24),
                 AutoEllipsis = true
             };
@@ -1328,10 +1435,24 @@ namespace EnvanterSayimApp
                 Text = breakdownText,
                 Font = new Font("Segoe UI", 8.8f, FontStyle.Regular),
                 ForeColor = ColTextMuted,
-                Location = new Point(84, 42),
-                Size = new Size(width - 330, 22),
+                Location = new Point(84, 38),
+                Size = new Size(width - 330, 20),
                 AutoEllipsis = true
             };
+
+            if (notebooksInRooms.Count > 0)
+            {
+                Label lblNotes = new Label
+                {
+                    Text = "📓 Defter Kayıtları: " + string.Join("  |  ", notebooksInRooms),
+                    Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                    ForeColor = ColAmberText,
+                    Location = new Point(84, 62),
+                    Size = new Size(width - 310, 20),
+                    AutoEllipsis = true
+                };
+                card.Controls.Add(lblNotes);
+            }
 
             Label lblTotalBadge = new Label
             {
@@ -1526,7 +1647,20 @@ namespace EnvanterSayimApp
         }
 
         // =====================================================================
-        // DİYALOGLAR VE AKSİYONLAR
+        // 📓 ÜRÜN DEFTERİ (SERİ NO / NUMARA / ZİMMET KAYITLARI) PENCERESİ
+        // =====================================================================
+        private void OpenNotebookDialog(RoomData room, ProductItem product)
+        {
+            using (var dlg = new ProductNotebookDialog(store, room, product))
+            {
+                dlg.ShowDialog(this);
+                AppHelper.SaveStore(store);
+                RefreshAll();
+            }
+        }
+
+        // =====================================================================
+        // DİĞER DİYALOGLAR VE AKSİYONLAR
         // =====================================================================
         private void OnPrimaryActionClicked()
         {
@@ -1853,7 +1987,7 @@ namespace EnvanterSayimApp
                 if (sfd.ShowDialog(this) == DialogResult.OK)
                 {
                     StringBuilder sb = new StringBuilder();
-                    sb.AppendLine("Oda Adi;Oda Aciklamasi;Urun Adi;Sayim Adedi");
+                    sb.AppendLine("Oda Adi;Oda Aciklamasi;Urun Adi;Sayim Adedi;Defter / Seri No / Numaralar");
 
                     foreach (var room in store.Rooms)
                     {
@@ -1862,14 +1996,15 @@ namespace EnvanterSayimApp
                             var prod = store.Products.FirstOrDefault(p => p.Id == item.ProductId);
                             if (prod != null)
                             {
-                                sb.AppendLine($"\"{EscapeCsv(room.Name)}\";\"{EscapeCsv(room.Note)}\";\"{EscapeCsv(prod.Name)}\";{item.Quantity}");
+                                string notesFlat = (item.Notebook ?? "").Replace("\r\n", " | ").Replace("\n", " | ").Trim();
+                                sb.AppendLine($"\"{EscapeCsv(room.Name)}\";\"{EscapeCsv(room.Note)}\";\"{EscapeCsv(prod.Name)}\";{item.Quantity};\"{EscapeCsv(notesFlat)}\"");
                             }
                         }
                     }
 
                     sb.AppendLine();
-                    sb.AppendLine("GENEL TOPLAM OZETI;;;");
-                    sb.AppendLine("Urun Adi;Bulundugu Oda Sayisi;Genel Toplam Adet;Oda Dagilimi");
+                    sb.AppendLine("GENEL TOPLAM OZETI;;;;");
+                    sb.AppendLine("Urun Adi;Bulundugu Oda Sayisi;Genel Toplam Adet;Oda Dagilimi;Tum Defter Kayitlari");
 
                     foreach (var prod in store.Products)
                     {
@@ -1879,11 +2014,16 @@ namespace EnvanterSayimApp
                             .Select(r => $"{r.Name}: {r.GetQuantity(prod.Id)}")
                             .ToList();
 
-                        sb.AppendLine($"\"{EscapeCsv(prod.Name)}\";{breakdown.Count};{total};\"{EscapeCsv(string.Join(" | ", breakdown))}\"");
+                        var allNotes = store.Rooms
+                            .Where(r => !string.IsNullOrWhiteSpace(r.GetNotebook(prod.Id)))
+                            .Select(r => $"{r.Name}: {r.GetNotebook(prod.Id).Replace("\r\n", ", ").Replace("\n", ", ")}")
+                            .ToList();
+
+                        sb.AppendLine($"\"{EscapeCsv(prod.Name)}\";{breakdown.Count};{total};\"{EscapeCsv(string.Join(" | ", breakdown))}\";\"{EscapeCsv(string.Join(" || ", allNotes))}\"");
                     }
 
                     File.WriteAllText(sfd.FileName, sb.ToString(), new UTF8Encoding(true));
-                    MessageBox.Show("Envanter raporu Excel (CSV) formatında başarıyla kaydedildi!", "Dışa Aktarıldı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Envanter raporu (Defter / Seri No kayıtlarıyla birlikte) Excel (CSV) formatında kaydedildi!", "Dışa Aktarıldı", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
         }
@@ -1905,6 +2045,257 @@ namespace EnvanterSayimApp
                 AppHelper.SaveStore(store);
                 RefreshAll();
             }
+        }
+    }
+
+    // =========================================================================
+    // 📓 ÜRÜN DEFTERİ PENCERESİ (NUMARA, SERİ NO VE NOT DEFTERİ)
+    // =========================================================================
+    public class ProductNotebookDialog : Form
+    {
+        private readonly InventoryStore store;
+        private readonly RoomData room;
+        private readonly ProductItem product;
+
+        private TextBox txtQuickSerial;
+        private TextBox txtNotebook;
+        private Label lblLineCount;
+        private Button btnSyncQty;
+
+        private Color ColBrand => store.DarkMode ? Color.FromArgb(99, 102, 241) : Color.FromArgb(79, 70, 229);
+        private Color ColBg => store.DarkMode ? Color.FromArgb(15, 23, 42) : Color.FromArgb(248, 250, 252);
+        private Color ColCard => store.DarkMode ? Color.FromArgb(30, 41, 59) : Color.White;
+        private Color ColSurfaceAlt => store.DarkMode ? Color.FromArgb(51, 65, 85) : Color.FromArgb(241, 245, 249);
+        private Color ColTextDark => store.DarkMode ? Color.FromArgb(248, 250, 252) : Color.FromArgb(15, 23, 42);
+        private Color ColTextMuted => store.DarkMode ? Color.FromArgb(148, 163, 184) : Color.FromArgb(100, 116, 139);
+        private Color ColAmberBg => store.DarkMode ? Color.FromArgb(120, 53, 15) : Color.FromArgb(254, 243, 199);
+        private Color ColAmberText => store.DarkMode ? Color.FromArgb(253, 230, 138) : Color.FromArgb(180, 83, 9);
+
+        public ProductNotebookDialog(InventoryStore store, RoomData room, ProductItem product)
+        {
+            this.store = store;
+            this.room = room;
+            this.product = product;
+
+            this.Text = $"📓 Ürün Defteri — {product.Name} ({room.Name})";
+            this.Size = new Size(640, 620);
+            this.StartPosition = FormStartPosition.CenterParent;
+            this.FormBorderStyle = FormBorderStyle.FixedDialog;
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.BackColor = ColCard;
+            this.ForeColor = ColTextDark;
+            this.Font = new Font("Segoe UI", 9.5f);
+
+            BuildNotebookUI();
+            UpdateLineCounter();
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            AppHelper.ApplyWindowTitleBarTheme(this, store.DarkMode);
+        }
+
+        private void BuildNotebookUI()
+        {
+            // Üst Ürün Bilgi Kartı
+            Panel topInfo = new Panel
+            {
+                Location = new Point(18, 14),
+                Size = new Size(588, 72),
+                BackColor = ColBg
+            };
+
+            PictureBox pic = new PictureBox
+            {
+                Location = new Point(10, 8),
+                Size = new Size(56, 56),
+                BackColor = ColSurfaceAlt,
+                SizeMode = PictureBoxSizeMode.Zoom
+            };
+            Image img = AppHelper.GetProductImage(product);
+            if (img != null) pic.Image = img;
+
+            Label lblTitle = new Label
+            {
+                Text = $"📓 {product.Name} — Numara & Seri No Defteri",
+                Font = new Font("Segoe UI", 12f, FontStyle.Bold),
+                ForeColor = ColTextDark,
+                Location = new Point(78, 12),
+                AutoSize = true
+            };
+
+            Label lblSub = new Label
+            {
+                Text = $"Oda: {room.Name}   •   Mevcut Sayım Adedi: {room.GetQuantity(product.Id)}",
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
+                ForeColor = ColTextMuted,
+                Location = new Point(78, 40),
+                AutoSize = true
+            };
+
+            topInfo.Controls.AddRange(new Control[] { pic, lblTitle, lblSub });
+
+            // Hızlı Seri No / Numara Ekleme Satırı
+            Label lblQuick = new Label
+            {
+                Text = "⚡ Hızlı Numara / Seri No / Zimmet Ekle (Yazıp Enter'a basın):",
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = ColAmberText,
+                Location = new Point(18, 98),
+                AutoSize = true
+            };
+
+            txtQuickSerial = new TextBox
+            {
+                Location = new Point(18, 122),
+                Size = new Size(445, 30),
+                BackColor = ColBg,
+                ForeColor = ColTextDark,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Segoe UI", 10.5f)
+            };
+            txtQuickSerial.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.SuppressKeyPress = true;
+                    AddQuickSerialLine();
+                }
+            };
+
+            Button btnAddSerial = new Button
+            {
+                Text = "+ Deftere Ekle",
+                Location = new Point(472, 120),
+                Size = new Size(134, 32),
+                BackColor = ColBrand,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnAddSerial.FlatAppearance.BorderSize = 0;
+            btnAddSerial.Click += (s, e) => AddQuickSerialLine();
+
+            // Serbest Defter Alanı Başlığı
+            Label lblEditorHeader = new Label
+            {
+                Text = "📝 Defter Kayıtları (Her satıra bir Seri No, Numara veya Not yazabilirsiniz):",
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = ColTextDark,
+                Location = new Point(18, 166),
+                AutoSize = true
+            };
+
+            lblLineCount = new Label
+            {
+                Text = "0 Kayıtlı Satır",
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                ForeColor = ColAmberText,
+                Location = new Point(480, 166),
+                Size = new Size(125, 20),
+                TextAlign = ContentAlignment.MiddleRight
+            };
+
+            txtNotebook = new TextBox
+            {
+                Location = new Point(18, 192),
+                Size = new Size(588, 310),
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                AcceptsReturn = true,
+                BackColor = ColBg,
+                ForeColor = ColTextDark,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Consolas", 11f),
+                Text = (room.GetNotebook(product.Id) ?? "").Replace("\r\n", "\n").Replace("\n", Environment.NewLine)
+            };
+            txtNotebook.TextChanged += (s, e) =>
+            {
+                room.SetNotebook(product.Id, txtNotebook.Text);
+                UpdateLineCounter();
+            };
+
+            // Alt Butonlar
+            btnSyncQty = new Button
+            {
+                Text = "🔄 Ürün Adedini Defterdeki Satır Sayısına Eşitle",
+                Location = new Point(18, 518),
+                Size = new Size(340, 40),
+                BackColor = ColAmberBg,
+                ForeColor = ColAmberText,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.8f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnSyncQty.FlatAppearance.BorderSize = 0;
+            btnSyncQty.Click += (s, e) =>
+            {
+                int count = AppHelper.CountNotebookLines(txtNotebook.Text);
+                room.SetQuantity(product.Id, count);
+                AppHelper.SaveStore(store);
+                lblSub.Text = $"Oda: {room.Name}   •   Mevcut Sayım Adedi: {room.GetQuantity(product.Id)}";
+                MessageBox.Show($"\"{product.Name}\" adedi defterdeki kayıt sayısına ({count} adet) eşitlendi.", "Adet Eşitlendi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+
+            Button btnSaveClose = new Button
+            {
+                Text = "💾 Kaydet ve Kapat",
+                Location = new Point(446, 518),
+                Size = new Size(160, 40),
+                BackColor = ColBrand,
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnSaveClose.FlatAppearance.BorderSize = 0;
+            btnSaveClose.Click += (s, e) =>
+            {
+                room.SetNotebook(product.Id, txtNotebook.Text);
+                AppHelper.SaveStore(store);
+                this.DialogResult = DialogResult.OK;
+                this.Close();
+            };
+
+            this.Controls.AddRange(new Control[]
+            {
+                topInfo, lblQuick, txtQuickSerial, btnAddSerial,
+                lblEditorHeader, lblLineCount, txtNotebook,
+                btnSyncQty, btnSaveClose
+            });
+        }
+
+        private void AddQuickSerialLine()
+        {
+            string val = (txtQuickSerial.Text ?? "").Trim();
+            if (string.IsNullOrEmpty(val)) return;
+
+            int nextNum = AppHelper.CountNotebookLines(txtNotebook.Text) + 1;
+            string lineToAdd = $"#{nextNum} - {val}";
+
+            if (string.IsNullOrWhiteSpace(txtNotebook.Text))
+            {
+                txtNotebook.Text = lineToAdd;
+            }
+            else
+            {
+                txtNotebook.AppendText(Environment.NewLine + lineToAdd);
+            }
+
+            txtQuickSerial.Text = "";
+            txtQuickSerial.Focus();
+            room.SetNotebook(product.Id, txtNotebook.Text);
+            UpdateLineCounter();
+        }
+
+        private void UpdateLineCounter()
+        {
+            int count = AppHelper.CountNotebookLines(txtNotebook.Text);
+            lblLineCount.Text = $"{count} Kayıtlı Satır";
+            btnSyncQty.Text = $"🔄 Ürün Adedini Satır Sayısına Eşitle ({count})";
         }
     }
 

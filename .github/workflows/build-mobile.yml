@@ -29,7 +29,7 @@ jobs:
       - name: Build Android APK with Capacitor
         run: |
           mkdir -p www
-          cp index.html manifest.json sw.js icon.svg www/
+          cp index.html seed_data.js manifest.json sw.js icon.svg www/
           npm init -y
           npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
           npx cap init "Envanter Sayim" "com.umtcnsy.envantersayim" --web-dir www
