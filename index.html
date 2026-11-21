@@ -1,8 +1,15 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" class="dark">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Envanter Sayım" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+  <link rel="apple-touch-icon" href="icon.svg" />
   <title>Envanter & Oda Sayım Uygulaması</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -10,15 +17,18 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           colors: {
             brand: {
               50: '#eef2ff',
               100: '#e0e7ff',
+              400: '#818cf8',
               500: '#6366f1',
               600: '#4f46e5',
               700: '#4338ca',
+              900: '#312e81',
             }
           }
         }
@@ -26,7 +36,6 @@
     }
   </script>
   <style>
-    /* Sayı inputlarındaki varsayılan okları kaldır */
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button {
       -webkit-appearance: none;
@@ -35,62 +44,63 @@
     input[type=number] {
       -moz-appearance: textfield;
     }
-    /* Dokunmatik ekranlarda çift tıklama zoom'unu engelle */
     button, input {
       touch-action: manipulation;
     }
-    .no-scrollbar::-webkit-scrollbar {
-      display: none;
-    }
-    .no-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans select-none">
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col font-sans select-none transition-colors duration-200">
 
   <!-- ÜST BAR (HEADER) -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+  <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30 shadow-sm">
     <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between gap-2">
       <div class="flex items-center gap-2.5 min-w-0">
         <div class="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white shadow-sm shrink-0">
           <i data-lucide="boxes" class="w-5 h-5"></i>
         </div>
-        <div class=" truncate">
-          <h1 class="font-bold text-base sm:text-lg leading-tight text-slate-900 truncate">Envanter Sayım</h1>
-          <p id="headerSubtitle" class="text-xs text-slate-500 truncate">Oda & Ürün Takip Sistemi</p>
+        <div class="truncate">
+          <h1 class="font-bold text-base sm:text-lg leading-tight text-slate-900 dark:text-white truncate">Envanter Sayım</h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Mobil & Masaüstü Sayım</p>
         </div>
       </div>
 
       <!-- Üst Aksiyon Butonları -->
       <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-        <button onclick="exportCSV()" title="Excel (CSV) Olarak İndir" class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs sm:text-sm font-medium transition">
+        <!-- PWA Telefona Kur Butonu (Desteklenen Tarayıcılarda Otomatik Görünür) -->
+        <button id="pwaInstallBtn" onclick="installPWA()" class="hidden items-center gap-1.5 px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold shadow-sm transition">
+          <i data-lucide="smartphone" class="w-4 h-4"></i>
+          <span>Telefona Kur</span>
+        </button>
+
+        <!-- Excel (CSV) İndir / Paylaş -->
+        <button onclick="exportCSV()" title="Excel (CSV) Olarak İndir / Paylaş" class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 hover:bg-emerald-100 dark:hover:bg-emerald-900/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs sm:text-sm font-semibold transition">
           <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
           <span class="hidden sm:inline">Excel İndir</span>
         </button>
 
+        <!-- Karanlık / Açık Mod Butonu -->
+        <button id="themeToggleBtn" onclick="toggleDarkMode()" title="Karanlık / Açık Mod" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-amber-300 transition">
+          <i id="themeToggleIcon" data-lucide="sun" class="w-5 h-5"></i>
+        </button>
+
+        <!-- Yedekleme ve Ayarlar Menüsü -->
         <div class="relative">
-          <button onclick="toggleBackupMenu()" title="Yedekleme ve Ayarlar" class="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
+          <button onclick="toggleBackupMenu()" title="Yedekleme ve PC Aktarımı" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition">
             <i data-lucide="settings-2" class="w-5 h-5"></i>
           </button>
-          <!-- Açılır Menü -->
-          <div id="backupMenu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50">
-            <button onclick="exportJSONBackup()" class="w-full px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2.5">
-              <i data-lucide="download" class="w-4 h-4 text-brand-600"></i>
-              Yedek İndir (Fotoğraflı)
+          <div id="backupMenu" class="hidden absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 py-1.5 z-50">
+            <div class="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">PC (.exe) & Telefon Senkron</div>
+            <button onclick="exportPCXml()" class="w-full px-4 py-2.5 text-left text-xs sm:text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-2.5">
+              <i data-lucide="monitor-down" class="w-4 h-4 text-brand-500"></i>
+              PC Uyumlu Yedek İndir (.xml)
             </button>
-            <label class="w-full px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer">
-              <i data-lucide="upload" class="w-4 h-4 text-amber-600"></i>
-              Yedek Yükle (.json)
-              <input type="file" accept=".json" class="hidden" onchange="importJSONBackup(event)" />
+            <label class="w-full px-4 py-2.5 text-left text-xs sm:text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-2.5 cursor-pointer">
+              <i data-lucide="Upload" class="w-4 h-4 text-amber-500"></i>
+              Yedek Yükle (.xml veya .json)
+              <input type="file" accept=".xml,.json" class="hidden" onchange="importBackupFile(event)" />
             </label>
-            <hr class="my-1 border-slate-100" />
-            <button onclick="loadDemoData(true)" class="w-full px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2.5">
-              <i data-lucide="sparkles" class="w-4 h-4 text-indigo-500"></i>
-              Örnek Verileri Yükle
-            </button>
-            <button onclick="resetAllData()" class="w-full px-4 py-2.5 text-left text-sm text-rose-600 hover:bg-rose-50 flex items-center gap-2.5">
+            <hr class="my-1 border-slate-100 dark:border-slate-700" />
+            <button onclick="resetAllData()" class="w-full px-4 py-2.5 text-left text-xs sm:text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2.5">
               <i data-lucide="trash-2" class="w-4 h-4"></i>
               Tüm Verileri Sıfırla
             </button>
@@ -100,18 +110,18 @@
     </div>
 
     <!-- ANA NAVİGASYON SEKMELERİ -->
-    <div class="max-w-5xl mx-auto px-4 flex border-t border-slate-100 bg-slate-50/60">
-      <button id="tab-rooms" onclick="switchTab('rooms')" class="flex-1 py-3 text-xs sm:text-sm font-semibold border-b-2 border-brand-600 text-brand-600 flex items-center justify-center gap-1.5 transition">
+    <div class="max-w-5xl mx-auto px-4 flex border-t border-slate-100 dark:border-slate-700/70 bg-slate-50/60 dark:bg-slate-800/80">
+      <button id="tab-rooms" onclick="switchTab('rooms')" class="flex-1 py-3 text-xs sm:text-sm font-semibold border-b-2 border-brand-500 text-brand-600 dark:text-brand-400 flex items-center justify-center gap-1.5 transition">
         <i data-lucide="door-open" class="w-4 h-4"></i>
         <span>Odalar</span>
-        <span id="badge-rooms" class="px-1.5 py-0.5 text-[11px] rounded-full bg-brand-100 text-brand-700">0</span>
+        <span id="badge-rooms" class="px-1.5 py-0.5 text-[11px] rounded-full bg-brand-100 dark:bg-brand-900/80 text-brand-700 dark:text-brand-300">0</span>
       </button>
-      <button id="tab-catalog" onclick="switchTab('catalog')" class="flex-1 py-3 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center gap-1.5 transition">
+      <button id="tab-catalog" onclick="switchTab('catalog')" class="flex-1 py-3 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 flex items-center justify-center gap-1.5 transition">
         <i data-lucide="package" class="w-4 h-4"></i>
         <span>Ürün Havuzu</span>
-        <span id="badge-catalog" class="px-1.5 py-0.5 text-[11px] rounded-full bg-slate-200 text-slate-700">0</span>
+        <span id="badge-catalog" class="px-1.5 py-0.5 text-[11px] rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">0</span>
       </button>
-      <button id="tab-summary" onclick="switchTab('summary')" class="flex-1 py-3 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center gap-1.5 transition">
+      <button id="tab-summary" onclick="switchTab('summary')" class="flex-1 py-3 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 flex items-center justify-center gap-1.5 transition">
         <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
         <span>Genel Özet</span>
       </button>
@@ -123,10 +133,10 @@
 
     <!-- 1. GÖRÜNÜM: ODALAR LİSTESİ -->
     <section id="view-rooms" class="space-y-4">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
         <div>
-          <h2 class="text-lg font-bold text-slate-900">Odalar ve Bölgeler</h2>
-          <p class="text-xs text-slate-500">Sayım yapmak istediğiniz odaya tıklayın veya yeni oda ekleyin.</p>
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white">Odalar ve Bölgeler</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Sayım yapmak istediğiniz odaya dokunun veya yeni oda ekleyin.</p>
         </div>
         <button onclick="openRoomModal()" class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.99] text-white font-semibold text-sm shadow-sm transition">
           <i data-lucide="plus-circle" class="w-4 h-4"></i>
@@ -137,7 +147,7 @@
       <!-- Oda Arama -->
       <div class="relative">
         <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-        <input id="roomSearchInput" type="text" oninput="renderRoomsList()" placeholder="Oda ara (Örn: Depo, Ofis, Mutfak)..." class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+        <input id="roomSearchInput" type="text" oninput="renderRoomsList()" placeholder="Oda ara (Örn: Depo, Ofis, Mutfak)..." class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
       </div>
 
       <!-- Odalar Grid -->
@@ -146,19 +156,18 @@
 
     <!-- 2. GÖRÜNÜM: ODA DETAYI (ODA İÇİNDE ÜRÜN SAYIMI) -->
     <section id="view-room-detail" class="hidden space-y-4">
-      <!-- Oda Üst Bilgi ve Geri Dönüş -->
-      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+      <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
         <div class="flex items-center justify-between gap-2">
-          <button onclick="closeRoomDetail()" class="flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-brand-600 bg-slate-100 hover:bg-brand-50 px-3 py-1.5 rounded-lg transition">
+          <button onclick="closeRoomDetail()" class="flex items-center gap-1.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-brand-600 bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-lg transition">
             <i data-lucide="arrow-left" class="w-4 h-4"></i>
             Odalara Dön
           </button>
 
           <div class="flex items-center gap-1.5">
-            <button onclick="editCurrentRoom()" class="p-2 text-slate-500 hover:text-brand-600 hover:bg-slate-100 rounded-lg transition" title="Oda Adını Düzenle">
+            <button onclick="editCurrentRoom()" class="p-2 text-slate-500 dark:text-slate-400 hover:text-brand-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition" title="Oda Adını Düzenle">
               <i data-lucide="pencil" class="w-4 h-4"></i>
             </button>
-            <button onclick="deleteCurrentRoom()" class="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Odayı Sil">
+            <button onclick="deleteCurrentRoom()" class="p-2 text-slate-500 dark:text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition" title="Odayı Sil">
               <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>
           </div>
@@ -167,10 +176,10 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
           <div>
             <div class="flex items-center gap-2">
-              <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-brand-50 text-brand-700 border border-brand-200">Aktif Oda</span>
-              <span id="roomDetailStats" class="text-xs text-slate-500 font-medium">0 Çeşit • 0 Toplam Adet</span>
+              <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-brand-50 dark:bg-brand-900/60 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-700">Aktif Oda</span>
+              <span id="roomDetailStats" class="text-xs text-slate-500 dark:text-slate-400 font-medium">0 Çeşit • 0 Toplam Adet</span>
             </div>
-            <h2 id="roomDetailTitle" class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">Oda Adı</h2>
+            <h2 id="roomDetailTitle" class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mt-1">Oda Adı</h2>
           </div>
 
           <button onclick="openAddProductToRoomModal()" class="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.99] text-white font-semibold text-sm shadow-md shadow-brand-500/20 transition">
@@ -184,11 +193,10 @@
       <div class="flex items-center gap-2">
         <div class="relative flex-1">
           <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-          <input id="roomProductSearchInput" type="text" oninput="renderRoomProducts()" placeholder="Bu odadaki ürünlerde ara..." class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+          <input id="roomProductSearchInput" type="text" oninput="renderRoomProducts()" placeholder="Bu odadaki ürünlerde ara..." class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
         </div>
 
-        <!-- Görünüm Değiştirme (Liste vs Kare) -->
-        <div class="flex items-center bg-white border border-slate-200 rounded-xl p-1 shrink-0 shadow-sm">
+        <div class="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-1 shrink-0 shadow-sm">
           <button id="btnViewList-room" onclick="setViewMode('list')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition" title="Dümdüz Liste Görünümü">
             <i data-lucide="list" class="w-4 h-4"></i>
             <span class="hidden sm:inline">Liste</span>
@@ -200,16 +208,15 @@
         </div>
       </div>
 
-      <!-- Oda İçi Ürünler Listesi veya Kare Grid -->
       <div id="roomProductsContainer"></div>
     </section>
 
     <!-- 3. GÖRÜNÜM: GENEL ÜRÜN HAVUZU (KATALOG) -->
     <section id="view-catalog" class="hidden space-y-4">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
         <div>
-          <h2 class="text-lg font-bold text-slate-900">Genel Ürün Havuzu</h2>
-          <p class="text-xs text-slate-500">Buradaki tüm ürünler odalarda ürün eklerken otomatik karşınıza çıkar.</p>
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white">Genel Ürün Havuzu</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Buradaki tüm ürünler odalarda ürün eklerken otomatik karşınıza çıkar.</p>
         </div>
         <button onclick="openNewCatalogProductModal()" class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm shadow-sm transition">
           <i data-lucide="package-plus" class="w-4 h-4"></i>
@@ -220,10 +227,9 @@
       <div class="flex items-center gap-2">
         <div class="relative flex-1">
           <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-          <input id="catalogSearchInput" type="text" oninput="renderCatalog()" placeholder="Ürün havuzunda ara..." class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+          <input id="catalogSearchInput" type="text" oninput="renderCatalog()" placeholder="Ürün havuzunda ara..." class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
         </div>
-        <!-- Görünüm Değiştirme -->
-        <div class="flex items-center bg-white border border-slate-200 rounded-xl p-1 shrink-0 shadow-sm">
+        <div class="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-1 shrink-0 shadow-sm">
           <button id="btnViewList-catalog" onclick="setViewMode('list')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition">
             <i data-lucide="list" class="w-4 h-4"></i>
             <span class="hidden sm:inline">Liste</span>
@@ -240,28 +246,27 @@
 
     <!-- 4. GÖRÜNÜM: GENEL ÖZET VE RAPOR -->
     <section id="view-summary" class="hidden space-y-4">
-      <!-- İstatistik Kartları -->
       <div class="grid grid-cols-3 gap-2.5 sm:gap-4">
-        <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm">
-          <span class="text-[11px] sm:text-xs text-slate-500 font-medium">Toplam Oda</span>
-          <p id="statTotalRooms" class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-0.5">0</p>
+        <div class="bg-white dark:bg-slate-800 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+          <span class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">Toplam Oda</span>
+          <p id="statTotalRooms" class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mt-0.5">0</p>
         </div>
-        <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm">
-          <span class="text-[11px] sm:text-xs text-slate-500 font-medium">Ürün Çeşidi</span>
-          <p id="statTotalProducts" class="text-xl sm:text-2xl font-extrabold text-brand-600 mt-0.5">0</p>
+        <div class="bg-white dark:bg-slate-800 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+          <span class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">Ürün Çeşidi</span>
+          <p id="statTotalProducts" class="text-xl sm:text-2xl font-extrabold text-brand-600 dark:text-brand-400 mt-0.5">0</p>
         </div>
-        <div class="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm">
-          <span class="text-[11px] sm:text-xs text-slate-500 font-medium">Toplam Sayılan</span>
-          <p id="statTotalCount" class="text-xl sm:text-2xl font-extrabold text-emerald-600 mt-0.5">0</p>
+        <div class="bg-white dark:bg-slate-800 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+          <span class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">Toplam Sayılan</span>
+          <p id="statTotalCount" class="text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">0</p>
         </div>
       </div>
 
       <div class="flex items-center gap-2">
         <div class="relative flex-1">
           <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-          <input id="summarySearchInput" type="text" oninput="renderSummary()" placeholder="Genel özette ürün ara..." class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+          <input id="summarySearchInput" type="text" oninput="renderSummary()" placeholder="Genel özette ürün ara..." class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
         </div>
-        <div class="flex items-center bg-white border border-slate-200 rounded-xl p-1 shrink-0 shadow-sm">
+        <div class="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-1 shrink-0 shadow-sm">
           <button id="btnViewList-summary" onclick="setViewMode('list')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition">
             <i data-lucide="list" class="w-4 h-4"></i>
             <span class="hidden sm:inline">Liste</span>
@@ -279,92 +284,86 @@
   </main>
 
   <!-- MODAL 1: YENİ ODA EKLE / DÜZENLE -->
-  <div id="roomModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-100 space-y-4">
+  <div id="roomModal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
       <div class="flex items-center justify-between">
-        <h3 id="roomModalTitle" class="text-lg font-bold text-slate-900">Yeni Oda Ekle</h3>
-        <button onclick="closeRoomModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
+        <h3 id="roomModalTitle" class="text-lg font-bold text-slate-900 dark:text-white">Yeni Oda Ekle</h3>
+        <button onclick="closeRoomModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
       <form onsubmit="saveRoomForm(event)" class="space-y-4">
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Oda / Bölüm Adı *</label>
-          <input id="roomNameInput" type="text" required placeholder="Örn: Ana Depo, Muhasebe Ofisi, Mutfak..." class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Oda / Bölüm Adı *</label>
+          <input id="roomNameInput" type="text" required placeholder="Örn: Ana Depo, Muhasebe Ofisi, Mutfak..." class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Açıklama / Kat Bilgisi (İsteğe Bağlı)</label>
-          <input id="roomNoteInput" type="text" placeholder="Örn: 2. Kat Kuzey Koridoru" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Açıklama / Kat Bilgisi (İsteğe Bağlı)</label>
+          <input id="roomNoteInput" type="text" placeholder="Örn: 2. Kat Kuzey Koridoru" class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
         </div>
         <div class="flex items-center justify-end gap-2 pt-2">
-          <button type="button" onclick="closeRoomModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold">İptal</button>
+          <button type="button" onclick="closeRoomModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-sm font-semibold">İptal</button>
           <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-sm">Kaydet</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- MODAL 2: ODAYA ÜRÜN EKLE (ÖNCEKİ ODALARDAKİ ÜRÜNLERİ SEÇ VEYA YENİ OLUŞTUR) -->
-  <div id="addProductToRoomModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-100 overflow-hidden">
-      <!-- Modal Başlık -->
-      <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
+  <!-- MODAL 2: ODAYA ÜRÜN EKLE (DİĞER ODALARDAKİ ÜRÜNLERİ SEÇ VEYA YENİ OLUŞTUR) -->
+  <div id="addProductToRoomModal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-2xl max-w-lg w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between shrink-0">
         <div>
-          <h3 class="text-base sm:text-lg font-bold text-slate-900">Odaya Ürün Ekle</h3>
-          <p class="text-xs text-slate-500">Daha önce eklenen ürünlerden seçin veya yeni ürün tanımlayın.</p>
+          <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Odaya Ürün Ekle</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Daha önce eklenen ürünlerden seçin veya yeni ürün tanımlayın.</p>
         </div>
-        <button onclick="closeAddProductToRoomModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
+        <button onclick="closeAddProductToRoomModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
-      <!-- Arama ve Hızlı Filtre -->
-      <div class="p-4 bg-slate-50 border-b border-slate-200/80 shrink-0 space-y-2">
+      <div class="p-4 bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200/80 dark:border-slate-700 shrink-0">
         <div class="relative">
           <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-          <input id="pickerSearchInput" type="text" oninput="renderProductPickerList()" placeholder="Ürün adı yazın (Örn: Monitör, Sandalye, Yazıcı)..." class="w-full pl-10 pr-9 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+          <input id="pickerSearchInput" type="text" oninput="renderProductPickerList()" placeholder="Ürün adı yazın (Örn: Monitör, Sandalye, Yazıcı)..." class="w-full pl-10 pr-9 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
           <button id="clearPickerSearchBtn" onclick="clearPickerSearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
             <i data-lucide="x-circle" class="w-4 h-4"></i>
           </button>
         </div>
       </div>
 
-      <!-- Kaydırılabilir Mevcut Ürünler Listesi + Yeni Oluşturma Alanı -->
       <div class="flex-1 overflow-y-auto p-4 space-y-4">
-        <!-- Daha Önce Eklenmiş Ürünler Listesi -->
         <div>
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Kayıtlı Ürünler (Diğer Odalardan / Havuzdan)</span>
-            <span id="pickerMatchCount" class="text-xs text-slate-500 font-medium">0 ürün</span>
+            <span id="pickerMatchCount" class="text-xs text-slate-500 dark:text-slate-400 font-medium">0 ürün</span>
           </div>
           <div id="pickerProductsList" class="space-y-2"></div>
         </div>
 
-        <!-- Yeni Ürün Oluşturup Odaya Ekleme Kartı -->
-        <div class="bg-brand-50/70 border border-brand-200 rounded-2xl p-4 space-y-3">
+        <div class="bg-brand-50/70 dark:bg-brand-900/30 border border-brand-200 dark:border-brand-700/70 rounded-2xl p-4 space-y-3">
           <div class="flex items-center gap-2">
             <div class="w-7 h-7 rounded-lg bg-brand-600 text-white flex items-center justify-center shrink-0">
-              <i data-lucide="sparkles" class="w-4 h-4"></i>
+              <i data-lucide="plus" class="w-4 h-4"></i>
             </div>
             <div>
-              <h4 class="text-sm font-bold text-slate-900">Listede Yok mu? Yeni Ürün Oluştur & Ekle</h4>
-              <p class="text-[11px] text-slate-500">Buradan eklediğiniz ürün diğer odalarda da otomatik görünür.</p>
+              <h4 class="text-sm font-bold text-slate-900 dark:text-white">Listede Yok mu? Yeni Ürün Oluştur & Ekle</h4>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">Buradan eklediğiniz ürün diğer odalarda da otomatik görünür.</p>
             </div>
           </div>
 
           <form onsubmit="createAndAddProductToRoom(event)" class="space-y-3">
             <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Yeni Ürün Adı *</label>
-              <input id="newRoomProductName" type="text" required placeholder="Ürün adını girin..." class="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+              <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Yeni Ürün Adı *</label>
+              <input id="newRoomProductName" type="text" required placeholder="Ürün adını girin..." class="w-full px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
             </div>
 
             <div class="flex items-center gap-3">
-              <!-- Fotoğraf Seçici -->
               <div class="flex-1">
-                <label class="block text-xs font-semibold text-slate-700 mb-1">Ürün Fotoğrafı (İsteğe Bağlı)</label>
+                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Ürün Fotoğrafı (Kamera / Galeri)</label>
                 <div class="flex items-center gap-2">
-                  <label class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white hover:bg-slate-50 border border-dashed border-slate-300 rounded-xl text-xs font-semibold text-slate-700 cursor-pointer transition">
-                    <i data-lucide="camera" class="w-4 h-4 text-brand-600"></i>
+                  <label class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white dark:bg-slate-900 hover:bg-slate-50 border border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 cursor-pointer transition">
+                    <i data-lucide="camera" class="w-4 h-4 text-brand-500"></i>
                     <span id="newRoomPhotoLabel">Fotoğraf Çek / Seç</span>
                     <input id="newRoomProductPhotoInput" type="file" accept="image/*" class="hidden" onchange="handleNewRoomPhotoPreview(event)" />
                   </label>
@@ -377,10 +376,9 @@
                 </div>
               </div>
 
-              <!-- Başlangıç Adedi -->
               <div class="w-28 shrink-0">
-                <label class="block text-xs font-semibold text-slate-700 mb-1">Başlangıç Adet</label>
-                <input id="newRoomProductQty" type="number" min="0" value="1" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-brand-500" />
+                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Başlangıç Adet</label>
+                <input id="newRoomProductQty" type="number" min="0" value="1" required class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-xl text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-brand-500" />
               </div>
             </div>
 
@@ -394,25 +392,25 @@
     </div>
   </div>
 
-  <!-- MODAL 3: ÜRÜN HAVUZU ÜRÜN EKLE / DÜZENLE (FOTOĞRAF & İSİM GÜNCELLEME) -->
-  <div id="catalogProductModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-100 space-y-4">
+  <!-- MODAL 3: ÜRÜN HAVUZU ÜRÜN EKLE / DÜZENLE -->
+  <div id="catalogProductModal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
       <div class="flex items-center justify-between">
-        <h3 id="catalogProductModalTitle" class="text-lg font-bold text-slate-900">Ürün Tanımla / Düzenle</h3>
-        <button onclick="closeCatalogProductModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
+        <h3 id="catalogProductModalTitle" class="text-lg font-bold text-slate-900 dark:text-white">Ürün Tanımla / Düzenle</h3>
+        <button onclick="closeCatalogProductModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
       <form onsubmit="saveCatalogProductForm(event)" class="space-y-4">
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Ürün Adı *</label>
-          <input id="catalogProductNameInput" type="text" required placeholder="Örn: Dell 27 İnç Monitör" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Ürün Adı *</label>
+          <input id="catalogProductNameInput" type="text" required placeholder="Örn: Dell 27 İnç Monitör" class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
         </div>
 
         <div class="space-y-2">
-          <label class="block text-xs font-semibold text-slate-700">Ürün Fotoğrafı</label>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300">Ürün Fotoğrafı</label>
           <div class="flex items-center gap-4">
-            <div id="catalogPhotoPreviewBox" class="w-24 h-24 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 relative">
+            <div id="catalogPhotoPreviewBox" class="w-24 h-24 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden shrink-0 relative">
               <i id="catalogPhotoPlaceholderIcon" data-lucide="image" class="w-8 h-8 text-slate-400"></i>
               <img id="catalogPhotoPreviewImg" src="" class="hidden w-full h-full object-cover" />
               <button type="button" id="catalogRemovePhotoBtn" onclick="removeCatalogModalPhoto()" class="hidden absolute top-1 right-1 bg-rose-600 text-white rounded-full p-1 shadow">
@@ -420,18 +418,18 @@
               </button>
             </div>
             <div class="flex-1 space-y-2">
-              <label class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 rounded-xl text-xs font-semibold cursor-pointer transition">
+              <label class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-brand-50 dark:bg-brand-900/50 hover:bg-brand-100 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-700 rounded-xl text-xs font-semibold cursor-pointer transition">
                 <i data-lucide="camera" class="w-4 h-4"></i>
                 Fotoğraf Çek veya Yükle
                 <input id="catalogProductPhotoInput" type="file" accept="image/*" class="hidden" onchange="handleCatalogPhotoChange(event)" />
               </label>
-              <p class="text-[11px] text-slate-500 leading-relaxed">Fotoğraf otomatik olarak optimize edilir ve tüm odalarda bu ürünün yanında görünür.</p>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">Fotoğraf otomatik sıkıştırılır ve tüm odalarda bu ürünün yanında görünür.</p>
             </div>
           </div>
         </div>
 
         <div class="flex items-center justify-end gap-2 pt-2">
-          <button type="button" onclick="closeCatalogProductModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold">İptal</button>
+          <button type="button" onclick="closeCatalogProductModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-sm font-semibold">İptal</button>
           <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-sm">Kaydet</button>
         </div>
       </form>
@@ -439,15 +437,15 @@
   </div>
 
   <!-- MODAL 4: TAM EKRAN FOTOĞRAF ÖNİZLEME (LIGHTBOX) -->
-  <div id="lightboxModal" onclick="closeLightbox()" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xs flex flex-col items-center justify-center p-4">
-    <div class="max-w-lg w-full bg-white rounded-2xl overflow-hidden shadow-2xl" onclick="event.stopPropagation()">
-      <div class="p-3.5 px-4 flex items-center justify-between border-b border-slate-100">
-        <h4 id="lightboxTitle" class="font-bold text-slate-900 text-sm truncate">Ürün Fotoğrafı</h4>
-        <button onclick="closeLightbox()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+  <div id="lightboxModal" onclick="closeLightbox()" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-xs flex flex-col items-center justify-center p-4">
+    <div class="max-w-lg w-full bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-2xl" onclick="event.stopPropagation()">
+      <div class="p-3.5 px-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-700">
+        <h4 id="lightboxTitle" class="font-bold text-slate-900 dark:text-white text-sm truncate">Ürün Fotoğrafı</h4>
+        <button onclick="closeLightbox()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
-      <div class="bg-slate-900 flex items-center justify-center max-h-[75vh] overflow-hidden">
+      <div class="bg-slate-950 flex items-center justify-center max-h-[75vh] overflow-hidden">
         <img id="lightboxImage" src="" alt="Ürün Görseli" class="max-h-[75vh] w-auto object-contain" />
       </div>
     </div>
@@ -458,28 +456,51 @@
 
   <!-- UYGULAMA JAVASCRIPT KODU -->
   <script>
-    /**************************************************************
-     * VERİ MODELİ VE INDEXEDDB / LOCALSTORAGE YÖNETİMİ
-     **************************************************************/
-    const DB_NAME = 'EnvanterSayimDB_v1';
+    const DB_NAME = 'EnvanterSayimDB_v2';
     const STORE_NAME = 'appState';
-    const STATE_KEY = 'inventoryData';
+    const STATE_KEY = 'inventoryDataClean';
 
     let state = {
-      viewMode: 'list', // 'list' (Dümdüz Liste) veya 'grid' (Kare Kare)
-      activeTab: 'rooms', // 'rooms' | 'catalog' | 'summary'
+      darkMode: true,
+      viewMode: 'list', // 'list' veya 'grid'
+      activeTab: 'rooms',
       currentRoomId: null,
-      rooms: [],     // [{ id, name, note, createdAt, items: { [productId]: quantity } }]
-      products: []   // [{ id, name, photo, createdAt }]
+      rooms: [],
+      products: []
     };
 
-    // Modal geçici state'leri
     let editingRoomId = null;
     let editingProductId = null;
     let tempNewRoomPhotoData = null;
     let tempCatalogPhotoData = null;
+    let deferredInstallPrompt = null;
 
-    // IndexedDB Başlatma
+    // PWA Service Worker & Telefona Kurulum Desteği
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      const btn = document.getElementById('pwaInstallBtn');
+      if (btn) {
+        btn.classList.remove('hidden');
+        btn.classList.add('flex');
+      }
+    });
+
+    async function installPWA() {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      document.getElementById('pwaInstallBtn').classList.add('hidden');
+    }
+
+    // IndexedDB
     function openDB() {
       return new Promise((resolve, reject) => {
         const req = indexedDB.open(DB_NAME, 1);
@@ -497,19 +518,16 @@
     async function saveState() {
       try {
         const db = await openDB();
-        return new Promise((resolve, reject) => {
+        await new Promise((resolve, reject) => {
           const tx = db.transaction(STORE_NAME, 'readwrite');
           tx.objectStore(STORE_NAME).put(state, STATE_KEY);
           tx.oncomplete = () => resolve();
           tx.onerror = () => reject(tx.error);
         });
       } catch (err) {
-        // Fallback localStorage
         try {
           localStorage.setItem(STATE_KEY, JSON.stringify(state));
-        } catch (e) {
-          console.error('Kayıt hatası:', e);
-        }
+        } catch (e) {}
       }
       updateHeaderBadges();
     }
@@ -537,10 +555,29 @@
       return false;
     }
 
-    /**************************************************************
-     * FOTOĞRAF SIKIŞTIRMA (CANVAS İLE OTOMATİK OPTİMİZASYON)
-     **************************************************************/
-    function compressImageFile(file, maxSize = 600, quality = 0.8) {
+    // KARANLIK / AÇIK MOD YÖNETİMİ
+    function applyTheme() {
+      const htmlEl = document.documentElement;
+      if (state.darkMode) {
+        htmlEl.classList.add('dark');
+      } else {
+        htmlEl.classList.remove('dark');
+      }
+      const btn = document.getElementById('themeToggleBtn');
+      if (btn) {
+        btn.innerHTML = `<i data-lucide="${state.darkMode ? 'sun' : 'moon'}" class="w-5 h-5"></i>`;
+      }
+      lucide.createIcons();
+    }
+
+    function toggleDarkMode() {
+      state.darkMode = !state.darkMode;
+      applyTheme();
+      saveState();
+    }
+
+    // FOTOĞRAF SIKIŞTIRMA
+    function compressImageFile(file, maxSize = 480, quality = 0.8) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -572,57 +609,6 @@
       });
     }
 
-    // Örnek ürünler için şık SVG tabanlı görsel üretici
-    function createDemoProductImage(bgHex, emoji, label) {
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
-        <rect width="400" height="400" rx="32" fill="${bgHex}"/>
-        <text x="50%" y="48%" dominant-baseline="middle" text-anchor="middle" font-size="130">${emoji}</text>
-        <text x="50%" y="82%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-weight="bold" font-size="28" fill="#1e293b">${label}</text>
-      </svg>`;
-      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
-    }
-
-    async function loadDemoData(notify = false) {
-      const p1 = { id: 'p_1', name: 'Ofis Çalışma Sandalyesi', photo: createDemoProductImage('#e0e7ff', '🪑', 'Çalışma Sandalyesi'), createdAt: Date.now() };
-      const p2 = { id: 'p_2', name: '27" Dell IPS Monitör', photo: createDemoProductImage('#dcfce7', '🖥️', '27" IPS Monitör'), createdAt: Date.now() };
-      const p3 = { id: 'p_3', name: 'Kablosuz Klavye & Mouse Seti', photo: createDemoProductImage('#fef3c7', '⌨️', 'Klavye & Mouse'), createdAt: Date.now() };
-      const p4 = { id: 'p_4', name: 'Lazer Yazıcı (HP)', photo: createDemoProductImage('#fae8ff', '🖨️', 'Lazer Yazıcı'), createdAt: Date.now() };
-      const p5 = { id: 'p_5', name: 'Çalışma Masası (160x80)', photo: createDemoProductImage('#ffedd5', ' Desk ', 'Çalışma Masası').replace(' Desk ', '🪵'), createdAt: Date.now() };
-
-      state.products = [p1, p2, p3, p4, p5];
-      state.rooms = [
-        {
-          id: 'r_1',
-          name: 'Yazılım Ofisi (Oda 101)',
-          note: '1. Kat Giriş Sağ Taraf',
-          createdAt: Date.now(),
-          items: { 'p_1': 12, 'p_2': 14, 'p_3': 12, 'p_5': 12 }
-        },
-        {
-          id: 'r_2',
-          name: 'Ana Depo',
-          note: 'Zemin Kat Arka Bölüm',
-          createdAt: Date.now(),
-          items: { 'p_1': 5, 'p_2': 3, 'p_4': 2 }
-        },
-        {
-          id: 'r_3',
-          name: 'Toplantı Odası',
-          note: '2. Kat',
-          createdAt: Date.now(),
-          items: { 'p_1': 8, 'p_2': 1 }
-        }
-      ];
-      state.currentRoomId = null;
-      await saveState();
-      renderAll();
-      document.getElementById('backupMenu').classList.add('hidden');
-      if (notify) showToast('Örnek oda ve fotoğraflı ürünler yüklendi!', 'success');
-    }
-
-    /**************************************************************
-     * GÖRÜNÜM (LİSTE / KARE) VE SEKME YÖNETİMİ
-     **************************************************************/
     function setViewMode(mode) {
       state.viewMode = mode;
       saveState();
@@ -638,10 +624,10 @@
         if (!btnList || !btnGrid) return;
         if (state.viewMode === 'list') {
           btnList.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 text-white shadow-xs transition';
-          btnGrid.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition';
+          btnGrid.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition';
         } else {
           btnGrid.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 text-white shadow-xs transition';
-          btnList.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition';
+          btnList.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition';
         }
       });
     }
@@ -654,9 +640,9 @@
       ['rooms', 'catalog', 'summary'].forEach(t => {
         const btn = document.getElementById(`tab-${t}`);
         if (t === tab) {
-          btn.className = 'flex-1 py-3 text-xs sm:text-sm font-semibold border-b-2 border-brand-600 text-brand-600 flex items-center justify-center gap-1.5 transition';
+          btn.className = 'flex-1 py-3 text-xs sm:text-sm font-semibold border-b-2 border-brand-500 text-brand-600 dark:text-brand-400 flex items-center justify-center gap-1.5 transition';
         } else {
-          btn.className = 'flex-1 py-3 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center justify-center gap-1.5 transition';
+          btn.className = 'flex-1 py-3 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 flex items-center justify-center gap-1.5 transition';
         }
       });
       renderAll();
@@ -668,6 +654,7 @@
     }
 
     function renderAll() {
+      applyTheme();
       updateHeaderBadges();
       updateViewToggleButtons();
 
@@ -700,9 +687,7 @@
       lucide.createIcons();
     }
 
-    /**************************************************************
-     * 1. ODALAR LİSTESİ VE ODA CRUD İŞLEMLERİ
-     **************************************************************/
+    // 1. ODALAR LİSTESİ
     function renderRoomsList() {
       const container = document.getElementById('roomsContainer');
       const query = (document.getElementById('roomSearchInput')?.value || '').trim().toLowerCase();
@@ -714,13 +699,13 @@
       if (filtered.length === 0) {
         container.className = 'block';
         container.innerHTML = `
-          <div class="bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center space-y-3">
-            <div class="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mx-auto">
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-10 text-center space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-brand-50 dark:bg-brand-900/50 text-brand-600 dark:text-brand-400 flex items-center justify-center mx-auto">
               <i data-lucide="door-open" class="w-6 h-6"></i>
             </div>
             <div>
-              <h3 class="font-bold text-slate-800">Henüz Oda Bulunamadı</h3>
-              <p class="text-xs text-slate-500 mt-1">Sayım yapmaya başlamak için yeni bir oda veya bölüm ekleyin.</p>
+              <h3 class="font-bold text-slate-800 dark:text-white">Henüz Oda Eklenmedi</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Sayım yapmaya başlamak için yeni bir oda veya bölüm ekleyin.</p>
             </div>
             <button onclick="openRoomModal()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 text-white text-xs font-semibold shadow-sm">
               <i data-lucide="plus" class="w-4 h-4"></i> İlk Odayı Ekle
@@ -737,45 +722,42 @@
         const productIds = Object.keys(itemsObj).filter(pid => state.products.some(p => p.id === pid));
         const varietyCount = productIds.length;
         const totalQty = productIds.reduce((acc, pid) => acc + (Number(itemsObj[pid]) || 0), 0);
-
-        // Odadaki ilk 4 ürünün küçük fotoğraf önizlemesi
         const previewProducts = productIds.slice(0, 4).map(pid => state.products.find(p => p.id === pid)).filter(Boolean);
 
         return `
-          <div onclick="openRoomDetail('${room.id}')" class="group bg-white hover:border-brand-400 border border-slate-200 rounded-2xl p-4 shadow-xs hover:shadow-md transition cursor-pointer flex flex-col justify-between gap-4">
+          <div onclick="openRoomDetail('${room.id}')" class="group bg-white dark:bg-slate-800 hover:border-brand-500 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-xs hover:shadow-md transition cursor-pointer flex flex-col justify-between gap-4">
             <div class="space-y-1.5">
               <div class="flex items-start justify-between gap-2">
                 <div class="flex items-center gap-2.5 min-w-0">
-                  <div class="w-10 h-10 rounded-xl bg-brand-50 group-hover:bg-brand-600 text-brand-600 group-hover:text-white flex items-center justify-center shrink-0 transition">
+                  <div class="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/60 group-hover:bg-brand-600 text-brand-600 dark:text-brand-300 group-hover:text-white flex items-center justify-center shrink-0 transition">
                     <i data-lucide="door-open" class="w-5 h-5"></i>
                   </div>
                   <div class="min-w-0">
-                    <h3 class="font-bold text-slate-900 group-hover:text-brand-600 transition truncate">${escapeHtml(room.name)}</h3>
-                    <p class="text-xs text-slate-500 truncate">${room.note ? escapeHtml(room.note) : 'Oda envanterini görüntüle'}</p>
+                    <h3 class="font-bold text-slate-900 dark:text-white group-hover:text-brand-500 transition truncate">${escapeHtml(room.name)}</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 truncate">${room.note ? escapeHtml(room.note) : 'Oda envanterini görüntüle'}</p>
                   </div>
                 </div>
-                <i data-lucide="chevron-right" class="w-5 h-5 text-slate-400 group-hover:text-brand-600 group-hover:translate-x-0.5 transition shrink-0"></i>
+                <i data-lucide="chevron-right" class="w-5 h-5 text-slate-400 group-hover:text-brand-500 transition shrink-0"></i>
               </div>
             </div>
 
-            <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+            <div class="pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <div>
                   <span class="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Çeşit</span>
-                  <span class="text-sm font-bold text-slate-800">${varietyCount} Ürün</span>
+                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">${varietyCount} Ürün</span>
                 </div>
-                <div class="h-6 w-px bg-slate-200"></div>
+                <div class="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
                 <div>
                   <span class="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Toplam Sayım</span>
-                  <span class="text-sm font-extrabold text-brand-600">${totalQty} Adet</span>
+                  <span class="text-sm font-extrabold text-brand-600 dark:text-brand-400">${totalQty} Adet</span>
                 </div>
               </div>
 
-              <!-- Küçük Fotoğraf İkonları -->
               <div class="flex -space-x-2 overflow-hidden">
                 ${previewProducts.map(p => p.photo
-                  ? `<img src="${p.photo}" class="inline-block h-7 w-7 rounded-full ring-2 ring-white object-cover bg-slate-100" alt="${escapeHtml(p.name)}"/>`
-                  : `<div class="inline-flex h-7 w-7 rounded-full ring-2 ring-white bg-slate-200 items-center justify-center text-[10px] font-bold text-slate-600">${escapeHtml(p.name.charAt(0).toUpperCase())}</div>`
+                  ? `<img src="${p.photo}" class="inline-block h-7 w-7 rounded-full ring-2 ring-white dark:ring-slate-800 object-cover bg-slate-100" alt="${escapeHtml(p.name)}"/>`
+                  : `<div class="inline-flex h-7 w-7 rounded-full ring-2 ring-white dark:ring-slate-800 bg-slate-200 dark:bg-slate-700 items-center justify-center text-[10px] font-bold text-slate-600 dark:text-slate-300">${escapeHtml(p.name.charAt(0).toUpperCase())}</div>`
                 ).join('')}
               </div>
             </div>
@@ -865,7 +847,7 @@
     async function deleteCurrentRoom() {
       const room = state.rooms.find(r => r.id === state.currentRoomId);
       if (!room) return;
-      if (!confirm(`"${room.name}" odasını ve içindeki sayım kayıtlarını silmek istediğinize emin misiniz? (Ürün havuzundaki ürünler silinmez)`)) return;
+      if (!confirm(`"${room.name}" odasını ve içindeki sayım kayıtlarını silmek istediğinize emin misiniz?`)) return;
 
       state.rooms = state.rooms.filter(r => r.id !== state.currentRoomId);
       state.currentRoomId = null;
@@ -874,9 +856,7 @@
       showToast('Oda silindi', 'info');
     }
 
-    /**************************************************************
-     * 2. ODA İÇİ ÜRÜN SAYIMI (LİSTE VE KARE GÖRÜNÜMÜ + ADET KONTROLÜ)
-     **************************************************************/
+    // 2. ODA İÇİ ÜRÜN SAYIMI
     function renderRoomDetail() {
       const room = state.rooms.find(r => r.id === state.currentRoomId);
       if (!room) {
@@ -884,7 +864,6 @@
         renderAll();
         return;
       }
-
       document.getElementById('roomDetailTitle').textContent = room.name;
       renderRoomProducts();
     }
@@ -911,10 +890,7 @@
         .map(pid => {
           const product = state.products.find(p => p.id === pid);
           if (!product) return null;
-          return {
-            ...product,
-            quantity: Number(itemsObj[pid]) || 0
-          };
+          return { ...product, quantity: Number(itemsObj[pid]) || 0 };
         })
         .filter(Boolean)
         .filter(item => item.name.toLowerCase().includes(query));
@@ -922,13 +898,13 @@
       if (roomProducts.length === 0) {
         container.className = 'block';
         container.innerHTML = `
-          <div class="bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center space-y-3">
-            <div class="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mx-auto">
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-10 text-center space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-brand-50 dark:bg-brand-900/50 text-brand-600 dark:text-brand-400 flex items-center justify-center mx-auto">
               <i data-lucide="package-open" class="w-6 h-6"></i>
             </div>
             <div>
-              <h3 class="font-bold text-slate-800">${query ? 'Aramanızla Eşleşen Ürün Yok' : 'Bu Odada Henüz Ürün Yok'}</h3>
-              <p class="text-xs text-slate-500 mt-1">Daha önce başka odalara eklediğiniz ürünlerden seçmek veya yeni ürün eklemek için aşağıdaki butona tıklayın.</p>
+              <h3 class="font-bold text-slate-800 dark:text-white">${query ? 'Aramanızla Eşleşen Ürün Yok' : 'Bu Odada Henüz Ürün Yok'}</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Daha önce başka odalara eklediğiniz ürünlerden seçmek veya yeni ürün eklemek için aşağıdaki butona dokunun.</p>
             </div>
             <button onclick="openAddProductToRoomModal()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold shadow-sm">
               <i data-lucide="plus" class="w-4 h-4"></i> Odaya Ürün Ekle
@@ -939,31 +915,28 @@
         return;
       }
 
-      // GÖRÜNÜM 1: DÜMDÜZ LİSTE GÖRÜNÜMÜ
       if (state.viewMode === 'list') {
         container.className = 'space-y-2.5';
         container.innerHTML = roomProducts.map(item => `
-          <div class="bg-white border border-slate-200 hover:border-slate-300 rounded-2xl p-3 sm:p-3.5 shadow-xs flex items-center justify-between gap-3 transition">
-            <!-- Sol: Fotoğraf ve Ürün Adı -->
+          <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 sm:p-3.5 shadow-xs flex items-center justify-between gap-3 transition">
             <div class="flex items-center gap-3 min-w-0 flex-1">
               ${renderProductThumbnail(item, 'w-14 h-14 sm:w-16 sm:h-16 rounded-xl')}
               <div class="min-w-0 flex-1">
-                <h4 class="font-bold text-slate-900 text-sm sm:text-base leading-snug break-words">${escapeHtml(item.name)}</h4>
+                <h4 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base leading-snug break-words">${escapeHtml(item.name)}</h4>
                 <div class="flex items-center gap-2 mt-1">
-                  <button onclick="openEditCatalogProductModal('${item.id}')" class="text-[11px] font-medium text-slate-400 hover:text-brand-600 flex items-center gap-1">
+                  <button onclick="openEditCatalogProductModal('${item.id}')" class="text-[11px] font-medium text-slate-400 hover:text-brand-400 flex items-center gap-1">
                     <i data-lucide="camera" class="w-3 h-3"></i> Düzenle
                   </button>
-                  <span class="text-slate-300">•</span>
-                  <button onclick="removeProductFromRoom('${room.id}', '${item.id}')" class="text-[11px] font-medium text-slate-400 hover:text-rose-600 flex items-center gap-1">
-                    <i data-lucide="trash-2" class="w-3 h-3"></i> Odadan Sil
+                  <span class="text-slate-300 dark:text-slate-600">•</span>
+                  <button onclick="removeProductFromRoom('${room.id}', '${item.id}')" class="text-[11px] font-medium text-slate-400 hover:text-rose-400 flex items-center gap-1">
+                    <i data-lucide="trash-2" class="w-3 h-3"></i> Sil
                   </button>
                 </div>
               </div>
             </div>
 
-            <!-- Sağ: - / Elle Input / + Kontrolleri -->
-            <div class="flex items-center gap-1 sm:gap-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200/80 shrink-0">
-              <button type="button" onclick="adjustRoomItemQty('${room.id}', '${item.id}', -1)" class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white hover:bg-rose-50 hover:text-rose-600 active:scale-95 text-slate-700 font-bold text-lg shadow-xs flex items-center justify-center transition" title="1 Azalt">
+            <div class="flex items-center gap-1 sm:gap-1.5 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-xl border border-slate-200/80 dark:border-slate-700 shrink-0">
+              <button type="button" onclick="adjustRoomItemQty('${room.id}', '${item.id}', -1)" class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/50 hover:text-rose-500 active:scale-95 text-slate-700 dark:text-slate-200 font-bold text-lg shadow-xs flex items-center justify-center transition">
                 <i data-lucide="minus" class="w-4 h-4"></i>
               </button>
               <input
@@ -972,47 +945,42 @@
                 min="0"
                 value="${item.quantity}"
                 onfocus="this.select()"
-                 oninput="setRoomItemQty('${room.id}', '${item.id}', this.value)"
-                class="w-14 sm:w-16 h-9 sm:h-10 text-center font-extrabold text-sm sm:text-base bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                oninput="setRoomItemQty('${room.id}', '${item.id}', this.value)"
+                class="w-14 sm:w-16 h-9 sm:h-10 text-center font-extrabold text-sm sm:text-base bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
-              <button type="button" onclick="adjustRoomItemQty('${room.id}', '${item.id}', 1)" class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-brand-600 hover:bg-brand-700 active:scale-95 text-white font-bold text-lg shadow-xs flex items-center justify-center transition" title="1 Artır">
+              <button type="button" onclick="adjustRoomItemQty('${room.id}', '${item.id}', 1)" class="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-brand-600 hover:bg-brand-700 active:scale-95 text-white font-bold text-lg shadow-xs flex items-center justify-center transition">
                 <i data-lucide="plus" class="w-4 h-4"></i>
               </button>
             </div>
           </div>
         `).join('');
-      }
-      // GÖRÜNÜM 2: KARE KARE (GRID / KART) GÖRÜNÜMÜ
-      else {
+      } else {
         container.className = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4';
         container.innerHTML = roomProducts.map(item => `
-          <div class="bg-white border border-slate-200 hover:border-slate-300 rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between transition">
-            <!-- Üst: Kare Ürün Fotoğrafı -->
-            <div class="relative aspect-square bg-slate-100 border-b border-slate-100 overflow-hidden group">
+          <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between transition">
+            <div class="relative aspect-square bg-slate-100 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-700 overflow-hidden group">
               ${item.photo
                 ? `<img src="${item.photo}" onclick="openLightbox('${item.id}')" class="w-full h-full object-cover cursor-zoom-in group-hover:scale-105 transition duration-300" alt="${escapeHtml(item.name)}" />`
-                : `<div onclick="openEditCatalogProductModal('${item.id}')" class="w-full h-full flex flex-col items-center justify-center text-slate-400 hover:text-brand-600 cursor-pointer p-4 text-center">
+                : `<div onclick="openEditCatalogProductModal('${item.id}')" class="w-full h-full flex flex-col items-center justify-center text-slate-400 hover:text-brand-400 cursor-pointer p-4 text-center">
                      <i data-lucide="image-plus" class="w-10 h-10 mb-1.5 stroke-[1.5]"></i>
                      <span class="text-[11px] font-medium">Fotoğraf Ekle</span>
                    </div>`
               }
-              <!-- Sağ Üst Aksiyon Butonları -->
               <div class="absolute top-2 right-2 flex items-center gap-1">
-                <button onclick="openEditCatalogProductModal('${item.id}')" class="p-1.5 rounded-lg bg-white/90 hover:bg-white text-slate-700 hover:text-brand-600 shadow-sm backdrop-blur-xs" title="Fotoğrafı/Adı Düzenle">
+                <button onclick="openEditCatalogProductModal('${item.id}')" class="p-1.5 rounded-lg bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 hover:text-brand-500 shadow-sm backdrop-blur-xs">
                   <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                 </button>
-                <button onclick="removeProductFromRoom('${room.id}', '${item.id}')" class="p-1.5 rounded-lg bg-white/90 hover:bg-rose-600 text-slate-700 hover:text-white shadow-sm backdrop-blur-xs transition" title="Odadan Kaldır">
+                <button onclick="removeProductFromRoom('${room.id}', '${item.id}')" class="p-1.5 rounded-lg bg-white/90 dark:bg-slate-800/90 hover:bg-rose-600 text-slate-700 dark:text-slate-200 hover:text-white shadow-sm backdrop-blur-xs transition">
                   <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                 </button>
               </div>
             </div>
 
-            <!-- Orta & Alt: Ürün Adı ve + / - / Input Kontrolleri -->
             <div class="p-3 flex-1 flex flex-col justify-between gap-2.5">
-              <h4 class="font-bold text-slate-900 text-xs sm:text-sm leading-snug line-clamp-2" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</h4>
+              <h4 class="font-bold text-slate-900 dark:text-white text-xs sm:text-sm leading-snug line-clamp-2">${escapeHtml(item.name)}</h4>
 
-              <div class="flex items-center justify-between gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
-                <button type="button" onclick="adjustRoomItemQty('${room.id}', '${item.id}', -1)" class="w-9 h-9 rounded-lg bg-white hover:bg-rose-50 hover:text-rose-600 active:scale-95 text-slate-700 font-bold shadow-xs flex items-center justify-center shrink-0 transition">
+              <div class="flex items-center justify-between gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700">
+                <button type="button" onclick="adjustRoomItemQty('${room.id}', '${item.id}', -1)" class="w-9 h-9 rounded-lg bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-slate-700 dark:text-slate-200 font-bold shadow-xs flex items-center justify-center shrink-0 transition">
                   <i data-lucide="minus" class="w-4 h-4"></i>
                 </button>
                 <input
@@ -1022,7 +990,7 @@
                   value="${item.quantity}"
                   onfocus="this.select()"
                   oninput="setRoomItemQty('${room.id}', '${item.id}', this.value)"
-                  class="w-full min-w-0 h-9 text-center font-extrabold text-sm bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  class="w-full min-w-0 h-9 text-center font-extrabold text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
                 <button type="button" onclick="adjustRoomItemQty('${room.id}', '${item.id}', 1)" class="w-9 h-9 rounded-lg bg-brand-600 hover:bg-brand-700 active:scale-95 text-white font-bold shadow-xs flex items-center justify-center shrink-0 transition">
                   <i data-lucide="plus" class="w-4 h-4"></i>
@@ -1036,23 +1004,21 @@
       lucide.createIcons();
     }
 
-    // Ortak Küçük Fotoğraf (Thumbnail) Render Yardımcı Fonksiyonu
     function renderProductThumbnail(product, sizeClasses = 'w-12 h-12 rounded-xl') {
       if (product.photo) {
         return `
-          <div onclick="openLightbox('${product.id}')" class="${sizeClasses} bg-slate-100 border border-slate-200 overflow-hidden shrink-0 cursor-zoom-in relative group">
+          <div onclick="openLightbox('${product.id}')" class="${sizeClasses} bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0 cursor-zoom-in relative group">
             <img src="${product.photo}" class="w-full h-full object-cover group-hover:scale-105 transition" alt="${escapeHtml(product.name)}" />
           </div>
         `;
       }
       return `
-        <div onclick="openEditCatalogProductModal('${product.id}')" title="Fotoğraf Eklemek İçin Tıklayın" class="${sizeClasses} bg-slate-100 hover:bg-brand-50 border border-dashed border-slate-300 hover:border-brand-300 flex flex-col items-center justify-center text-slate-400 hover:text-brand-600 shrink-0 cursor-pointer transition">
+        <div onclick="openEditCatalogProductModal('${product.id}')" title="Fotoğraf Ekle" class="${sizeClasses} bg-slate-100 dark:bg-slate-900 hover:bg-brand-50 border border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center text-slate-400 hover:text-brand-500 shrink-0 cursor-pointer transition">
           <i data-lucide="camera" class="w-5 h-5"></i>
         </div>
       `;
     }
 
-    // + ve - Butonlarıyla Adet Değiştirme
     async function adjustRoomItemQty(roomId, productId, delta) {
       const room = state.rooms.find(r => r.id === roomId);
       if (!room) return;
@@ -1060,14 +1026,12 @@
       const next = Math.max(0, current + delta);
       room.items[productId] = next;
 
-      // Input değerini DOM'u tamamen yeniden çizmeden anında güncelle (hızlı tuşlama için)
       const inputEl = document.getElementById(`qty-input-${roomId}-${productId}`);
       if (inputEl) inputEl.value = next;
       updateRoomStatsHeader(room);
       await saveState();
     }
 
-    // Elle Sayı Girildiğinde Adet Güncelleme
     async function setRoomItemQty(roomId, productId, rawValue) {
       const room = state.rooms.find(r => r.id === roomId);
       if (!room) return;
@@ -1090,9 +1054,7 @@
       showToast('Ürün odadan kaldırıldı', 'info');
     }
 
-    /**************************************************************
-     * ODAYA ÜRÜN EKLEME MODALI (DİĞER ODALARDAKİ ÜRÜNLERİ GÖSTERİR)
-     **************************************************************/
+    // ODAYA ÜRÜN EKLEME MODALI
     function openAddProductToRoomModal() {
       if (!state.currentRoomId) return;
       document.getElementById('pickerSearchInput').value = '';
@@ -1102,7 +1064,6 @@
 
       document.getElementById('addProductToRoomModal').classList.remove('hidden');
       renderProductPickerList();
-      setTimeout(() => document.getElementById('pickerSearchInput').focus(), 50);
     }
 
     function closeAddProductToRoomModal() {
@@ -1124,9 +1085,8 @@
       const query = (searchInput.value || '').trim();
       const queryLower = query.toLowerCase();
 
-      // Arama kutusuna yazılan metni otomatik olarak aşağıdaki "Yeni Ürün Adı" kutusuna da doldur
       const newProductNameInput = document.getElementById('newRoomProductName');
-      if (query && !newProductNameInput.dataset.manuallyEdited) {
+      if (query) {
         newProductNameInput.value = query;
       }
 
@@ -1139,8 +1099,8 @@
 
       if (matchedProducts.length === 0) {
         listEl.innerHTML = `
-          <div class="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-4 text-center text-xs text-slate-500">
-            "${escapeHtml(query)}" adında kayıtlı ürün bulunamadı. Hemen aşağıdaki alandan fotoğrafıyla birlikte yeni ürün olarak ekleyebilirsiniz.
+          <div class="bg-slate-50 dark:bg-slate-900/60 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-4 text-center text-xs text-slate-500 dark:text-slate-400">
+            ${query ? `"${escapeHtml(query)}" adında kayıtlı ürün bulunamadı.` : 'Henüz hiç ürün kaydedilmedi.'} Hemen aşağıdaki alandan fotoğrafıyla birlikte yeni ürün oluşturup odaya ekleyebilirsiniz.
           </div>
         `;
         return;
@@ -1150,36 +1110,35 @@
         const alreadyInRoom = Object.prototype.hasOwnProperty.call(room.items, product.id);
         const currentQtyInRoom = alreadyInRoom ? room.items[product.id] : 0;
 
-        // Bu ürünün eklendiği diğer odaları bul
         const otherRoomsWithProduct = state.rooms
           .filter(r => r.id !== room.id && Object.prototype.hasOwnProperty.call(r.items, product.id))
           .map(r => `${r.name} (${r.items[product.id]})`);
 
         return `
-          <div class="bg-white border ${alreadyInRoom ? 'border-emerald-300 bg-emerald-50/30' : 'border-slate-200'} rounded-xl p-2.5 flex items-center justify-between gap-3 hover:border-brand-300 transition">
+          <div class="bg-white dark:bg-slate-900 border ${alreadyInRoom ? 'border-emerald-500/60 bg-emerald-50/20 dark:bg-emerald-950/30' : 'border-slate-200 dark:border-slate-700'} rounded-xl p-2.5 flex items-center justify-between gap-3 transition">
             <div class="flex items-center gap-3 min-w-0 flex-1">
               ${product.photo
-                ? `<img src="${product.photo}" class="w-11 h-11 rounded-lg object-cover bg-slate-100 border border-slate-200 shrink-0" />`
-                : `<div class="w-11 h-11 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 shrink-0"><i data-lucide="package" class="w-5 h-5"></i></div>`
+                ? `<img src="${product.photo}" class="w-11 h-11 rounded-lg object-cover bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0" />`
+                : `<div class="w-11 h-11 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 shrink-0"><i data-lucide="package" class="w-5 h-5"></i></div>`
               }
               <div class="min-w-0 flex-1">
-                <p class="font-bold text-slate-900 text-sm truncate">${escapeHtml(product.name)}</p>
-                <p class="text-[11px] text-slate-500 truncate">
+                <p class="font-bold text-slate-900 dark:text-white text-sm truncate">${escapeHtml(product.name)}</p>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                   ${otherRoomsWithProduct.length > 0
                     ? `Diğer odalar: ${escapeHtml(otherRoomsWithProduct.join(', '))}`
-                    : 'Henüz başka odada yok'}
+                    : 'Başka odada henüz yok'}
                 </p>
               </div>
             </div>
 
             ${alreadyInRoom
               ? `<div class="flex items-center gap-1.5 shrink-0">
-                   <span class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-bold text-xs">Odada: ${currentQtyInRoom}</span>
-                   <button onclick="quickAddExistingProductToRoom('${product.id}', 1)" class="px-2.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold flex items-center gap-1 shadow-xs">
+                   <span class="px-2 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold text-xs">Odada: ${currentQtyInRoom}</span>
+                   <button onclick="quickAddExistingProductToRoom('${product.id}', 1)" class="px-2.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold flex items-center gap-1">
                      <i data-lucide="plus" class="w-3.5 h-3.5"></i> 1 Ekle
                    </button>
                  </div>`
-              : `<button onclick="quickAddExistingProductToRoom('${product.id}', 1)" class="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-95 text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 shadow-xs transition">
+              : `<button onclick="quickAddExistingProductToRoom('${product.id}', 1)" class="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-95 text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 transition">
                    <i data-lucide="plus" class="w-4 h-4"></i> Odaya Ekle
                  </button>`
             }
@@ -1190,7 +1149,6 @@
       lucide.createIcons();
     }
 
-    // Daha önce başka odada eklenmiş ürünü tek tıkla bu odaya ekle
     async function quickAddExistingProductToRoom(productId, addQty = 1) {
       const room = state.rooms.find(r => r.id === state.currentRoomId);
       const product = state.products.find(p => p.id === productId);
@@ -1205,7 +1163,6 @@
       showToast(`"${product.name}" odaya eklendi (${room.items[productId]} adet)`, 'success');
     }
 
-    // Yeni Ürün Fotoğraf Önizleme (Oda İçi Modal)
     async function handleNewRoomPhotoPreview(event) {
       const file = event.target.files?.[0];
       if (!file) return;
@@ -1227,7 +1184,6 @@
       document.getElementById('newRoomPhotoLabel').textContent = 'Fotoğraf Çek / Seç';
     }
 
-    // Listede olmayan yeni ürünü oluşturup hem havuza hem mevcut odaya ekle
     async function createAndAddProductToRoom(e) {
       e.preventDefault();
       const room = state.rooms.find(r => r.id === state.currentRoomId);
@@ -1237,14 +1193,13 @@
       const qty = Math.max(0, parseInt(document.getElementById('newRoomProductQty').value, 10) || 1);
       if (!name) return;
 
-      // Aynı isimde ürün zaten var mı kontrol et
       let existing = state.products.find(p => p.name.toLowerCase() === name.toLowerCase());
       if (existing) {
         if (tempNewRoomPhotoData && !existing.photo) {
           existing.photo = tempNewRoomPhotoData;
         }
         room.items[existing.id] = (Number(room.items[existing.id]) || 0) + qty;
-        showToast(`"${existing.name}" zaten mevcuttu, odaya +${qty} adet eklendi`, 'success');
+        showToast(`"${existing.name}" odaya +${qty} adet eklendi`, 'success');
       } else {
         const newProd = {
           id: 'p_' + Date.now(),
@@ -1265,9 +1220,7 @@
       renderRoomProducts();
     }
 
-    /**************************************************************
-     * 3. GENEL ÜRÜN HAVUZU (KATALOG) YÖNETİMİ
-     **************************************************************/
+    // 3. ÜRÜN HAVUZU
     function renderCatalog() {
       const container = document.getElementById('catalogContainer');
       const query = (document.getElementById('catalogSearchInput')?.value || '').trim().toLowerCase();
@@ -1277,13 +1230,13 @@
       if (filtered.length === 0) {
         container.className = 'block';
         container.innerHTML = `
-          <div class="bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center space-y-3">
-            <div class="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mx-auto">
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-10 text-center space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-brand-50 dark:bg-brand-900/50 text-brand-600 dark:text-brand-400 flex items-center justify-center mx-auto">
               <i data-lucide="package" class="w-6 h-6"></i>
             </div>
             <div>
-              <h3 class="font-bold text-slate-800">Ürün Havuzu Boş</h3>
-              <p class="text-xs text-slate-500 mt-1">Buradan veya herhangi bir odanın içinden ürün ekleyebilirsiniz.</p>
+              <h3 class="font-bold text-slate-800 dark:text-white">Ürün Havuzu Boş</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Buradan veya herhangi bir odanın içinden ürün ekleyebilirsiniz.</p>
             </div>
             <button onclick="openNewCatalogProductModal()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 text-white text-xs font-semibold shadow-sm">
               <i data-lucide="plus" class="w-4 h-4"></i> Yeni Ürün Tanımla
@@ -1300,20 +1253,20 @@
           const totalAcrossRooms = getTotalProductCount(product.id);
           const roomCount = getProductRoomCount(product.id);
           return `
-            <div class="bg-white border border-slate-200 rounded-2xl p-3 sm:p-3.5 shadow-xs flex items-center justify-between gap-3">
+            <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 sm:p-3.5 shadow-xs flex items-center justify-between gap-3">
               <div class="flex items-center gap-3 min-w-0 flex-1">
                 ${renderProductThumbnail(product, 'w-14 h-14 rounded-xl')}
                 <div class="min-w-0 flex-1">
-                  <h4 class="font-bold text-slate-900 text-sm sm:text-base truncate">${escapeHtml(product.name)}</h4>
-                  <p class="text-xs text-slate-500 mt-0.5">${roomCount} odada kayıtlı • Toplam <strong class="text-brand-600">${totalAcrossRooms} adet</strong></p>
+                  <h4 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">${escapeHtml(product.name)}</h4>
+                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">${roomCount} odada kayıtlı • Toplam <strong class="text-brand-600 dark:text-brand-400">${totalAcrossRooms} adet</strong></p>
                 </div>
               </div>
               <div class="flex items-center gap-1.5 shrink-0">
-                <button onclick="openEditCatalogProductModal('${product.id}')" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-brand-50 text-slate-700 hover:text-brand-600 text-xs font-semibold flex items-center gap-1.5 transition">
+                <button onclick="openEditCatalogProductModal('${product.id}')" class="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-brand-50 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition">
                   <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                  <span class="hidden sm:inline">Düzenle / Fotoğraf</span>
+                  <span class="hidden sm:inline">Düzenle</span>
                 </button>
-                <button onclick="deleteProductFromCatalog('${product.id}')" class="p-2 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 transition" title="Ürünü Tamamen Sil">
+                <button onclick="deleteProductFromCatalog('${product.id}')" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-rose-50 text-slate-500 dark:text-slate-300 hover:text-rose-500 transition">
                   <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
               </div>
@@ -1326,11 +1279,11 @@
           const totalAcrossRooms = getTotalProductCount(product.id);
           const roomCount = getProductRoomCount(product.id);
           return `
-            <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between">
-              <div class="relative aspect-square bg-slate-100 border-b border-slate-100 overflow-hidden group">
+            <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between">
+              <div class="relative aspect-square bg-slate-100 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-700 overflow-hidden group">
                 ${product.photo
                   ? `<img src="${product.photo}" onclick="openLightbox('${product.id}')" class="w-full h-full object-cover cursor-zoom-in group-hover:scale-105 transition duration-300" />`
-                  : `<div onclick="openEditCatalogProductModal('${product.id}')" class="w-full h-full flex flex-col items-center justify-center text-slate-400 hover:text-brand-600 cursor-pointer p-4 text-center">
+                  : `<div onclick="openEditCatalogProductModal('${product.id}')" class="w-full h-full flex flex-col items-center justify-center text-slate-400 hover:text-brand-400 cursor-pointer p-4 text-center">
                        <i data-lucide="image-plus" class="w-10 h-10 mb-1.5 stroke-[1.5]"></i>
                        <span class="text-[11px] font-medium">Fotoğraf Ekle</span>
                      </div>`
@@ -1338,14 +1291,14 @@
               </div>
               <div class="p-3 space-y-2">
                 <div>
-                  <h4 class="font-bold text-slate-900 text-xs sm:text-sm line-clamp-2">${escapeHtml(product.name)}</h4>
-                  <p class="text-[11px] text-slate-500 mt-0.5">${roomCount} oda • <strong class="text-brand-600">${totalAcrossRooms} adet</strong></p>
+                  <h4 class="font-bold text-slate-900 dark:text-white text-xs sm:text-sm line-clamp-2">${escapeHtml(product.name)}</h4>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">${roomCount} oda • <strong class="text-brand-600 dark:text-brand-400">${totalAcrossRooms} adet</strong></p>
                 </div>
-                <div class="flex items-center gap-1.5 pt-1 border-t border-slate-100">
-                  <button onclick="openEditCatalogProductModal('${product.id}')" class="flex-1 py-1.5 rounded-lg bg-slate-100 hover:bg-brand-50 text-slate-700 hover:text-brand-600 text-xs font-semibold flex items-center justify-center gap-1">
+                <div class="flex items-center gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-700">
+                  <button onclick="openEditCatalogProductModal('${product.id}')" class="flex-1 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-1">
                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i> Düzenle
                   </button>
-                  <button onclick="deleteProductFromCatalog('${product.id}')" class="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600">
+                  <button onclick="deleteProductFromCatalog('${product.id}')" class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-rose-500">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                   </button>
                 </div>
@@ -1467,9 +1420,7 @@
       showToast('Ürün tamamen silindi', 'info');
     }
 
-    /**************************************************************
-     * 4. GENEL ÖZET VE ODA DAĞILIM RAPORU
-     **************************************************************/
+    // 4. GENEL ÖZET
     function getTotalProductCount(productId) {
       return state.rooms.reduce((sum, r) => sum + (Number(r.items?.[productId]) || 0), 0);
     }
@@ -1508,8 +1459,8 @@
       if (summaryItems.length === 0) {
         container.className = 'block';
         container.innerHTML = `
-          <div class="bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center text-xs text-slate-500">
-            Gösterilecek ürün verisi bulunamadı.
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-10 text-center text-xs text-slate-500 dark:text-slate-400">
+            Henüz sayım verisi bulunmuyor.
           </div>
         `;
         return;
@@ -1518,15 +1469,15 @@
       if (state.viewMode === 'list') {
         container.className = 'space-y-2.5';
         container.innerHTML = summaryItems.map(item => `
-          <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex items-center gap-3 min-w-0">
               ${renderProductThumbnail(item, 'w-14 h-14 rounded-xl')}
               <div class="min-w-0 flex-1">
-                <h4 class="font-bold text-slate-900 text-sm sm:text-base">${escapeHtml(item.name)}</h4>
+                <h4 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base">${escapeHtml(item.name)}</h4>
                 <div class="flex flex-wrap gap-1.5 mt-1.5">
                   ${item.breakdown.length > 0
                     ? item.breakdown.map(b => `
-                        <button onclick="switchTab('rooms'); openRoomDetail('${b.roomId}')" class="px-2 py-0.5 rounded-md bg-slate-100 hover:bg-brand-50 text-slate-700 hover:text-brand-700 text-xs font-medium border border-slate-200/80 transition">
+                        <button onclick="switchTab('rooms'); openRoomDetail('${b.roomId}')" class="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium border border-slate-200/80 dark:border-slate-600 transition">
                           ${escapeHtml(b.roomName)}: <strong>${b.qty}</strong>
                         </button>
                       `).join('')
@@ -1535,31 +1486,31 @@
                 </div>
               </div>
             </div>
-            <div class="flex sm:flex-col items-center sm:items-end justify-between border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100 shrink-0">
+            <div class="flex sm:flex-col items-center sm:items-end justify-between border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100 dark:border-slate-700 shrink-0">
               <span class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Genel Toplam</span>
-              <span class="text-lg sm:text-xl font-extrabold text-emerald-600">${item.total} Adet</span>
+              <span class="text-lg sm:text-xl font-extrabold text-emerald-600 dark:text-emerald-400">${item.total} Adet</span>
             </div>
           </div>
         `).join('');
       } else {
         container.className = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5';
         container.innerHTML = summaryItems.map(item => `
-          <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between">
-            <div class="relative aspect-square bg-slate-100 border-b border-slate-100 overflow-hidden">
+          <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between">
+            <div class="relative aspect-square bg-slate-100 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-700 overflow-hidden">
               ${item.photo
                 ? `<img src="${item.photo}" onclick="openLightbox('${item.id}')" class="w-full h-full object-cover cursor-zoom-in" />`
-                : `<div class="w-full h-full flex items-center justify-center text-slate-300"><i data-lucide="package" class="w-10 h-10"></i></div>`
+                : `<div class="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-600"><i data-lucide="package" class="w-10 h-10"></i></div>`
               }
-              <div class="absolute bottom-2 right-2 px-2.5 py-1 rounded-lg bg-slate-900/80 text-white font-extrabold text-xs backdrop-blur-xs">
+              <div class="absolute bottom-2 right-2 px-2.5 py-1 rounded-lg bg-slate-900/85 text-white font-extrabold text-xs">
                 Toplam: ${item.total}
               </div>
             </div>
             <div class="p-3 space-y-2 flex-1 flex flex-col justify-between">
-              <h4 class="font-bold text-slate-900 text-xs sm:text-sm line-clamp-2">${escapeHtml(item.name)}</h4>
-              <div class="flex flex-wrap gap-1 pt-1 border-t border-slate-100">
+              <h4 class="font-bold text-slate-900 dark:text-white text-xs sm:text-sm line-clamp-2">${escapeHtml(item.name)}</h4>
+              <div class="flex flex-wrap gap-1 pt-1 border-t border-slate-100 dark:border-slate-700">
                 ${item.breakdown.length > 0
                   ? item.breakdown.map(b => `
-                      <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-medium">
+                      <span class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-medium">
                         ${escapeHtml(b.roomName)}: <strong>${b.qty}</strong>
                       </span>
                     `).join('')
@@ -1574,9 +1525,6 @@
       lucide.createIcons();
     }
 
-    /**************************************************************
-     * LIGHTBOX (BÜYÜK FOTOĞRAF ÖNİZLEME)
-     **************************************************************/
     function openLightbox(productId) {
       const product = state.products.find(p => p.id === productId);
       if (!product || !product.photo) return;
@@ -1590,19 +1538,37 @@
       document.getElementById('lightboxImage').src = '';
     }
 
-    /**************************************************************
-     * EXCEL (CSV) VE JSON YEDEK DIŞA / İÇE AKTARMA
-     **************************************************************/
-    function exportCSV() {
+    // DOSYA İNDİRME VEYA TELEFONDA PAYLAŞMA YARDIMCISI
+    async function downloadOrShareFile(blob, filename) {
+      try {
+        const file = new File([blob], filename, { type: blob.type });
+        if (navigator.canShare && navigator.canShare({ files: [file] }) && /Android|iPhone|iPad/i.test(navigator.userAgent)) {
+          await navigator.share({
+            files: [file],
+            title: filename
+          });
+          return;
+        }
+      } catch (e) {}
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    // EXCEL (CSV) RAPORU
+    async function exportCSV() {
       if (state.rooms.length === 0 && state.products.length === 0) {
         showToast('Dışa aktarılacak veri bulunamadı', 'error');
         return;
       }
 
-      const rows = [
-        ['Oda Adı', 'Oda Açıklaması', 'Ürün Adı', 'Sayım Adedi']
-      ];
-
+      const rows = [['Oda Adı', 'Oda Açıklaması', 'Ürün Adı', 'Sayım Adedi']];
       state.rooms.forEach(room => {
         const itemsObj = room.items || {};
         Object.keys(itemsObj).forEach(pid => {
@@ -1627,55 +1593,94 @@
         rows.push([prod.name, String(roomCount), String(total), dist]);
       });
 
-      // Türkçe Excel uyumu için noktalı virgül (;) ve UTF-8 BOM
       const csvContent = '\uFEFF' + rows.map(r => r.map(cell => `"${String(cell || '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
       const dateStr = new Date().toISOString().slice(0, 10);
-      a.href = url;
-      a.download = `Envanter_Sayim_Raporu_${dateStr}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('Excel (CSV) raporu indirildi!', 'success');
+      await downloadOrShareFile(blob, `Envanter_Sayim_Raporu_${dateStr}.csv`);
+      showToast('Excel (CSV) raporu hazırlandı!', 'success');
     }
 
     function toggleBackupMenu() {
-      const menu = document.getElementById('backupMenu');
-      menu.classList.toggle('hidden');
+      document.getElementById('backupMenu').classList.toggle('hidden');
     }
 
-    function exportJSONBackup() {
-      const dataStr = JSON.stringify(state, null, 2);
-      const blob = new Blob([dataStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      const dateStr = new Date().toISOString().slice(0, 10);
-      a.href = url;
-      a.download = `Envanter_Yedek_${dateStr}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+    // PC (EnvanterSayim.exe) İLE BİREBİR UYUMLU XML YEDEK DIŞA AKTARMA
+    async function exportPCXml() {
+      let xml = `<?xml version="1.0" encoding="utf-8"?>\n<InventoryStore xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">\n`;
+      xml += `  <ViewMode>${escapeXml(state.viewMode)}</ViewMode>\n`;
+      xml += `  <DarkMode>${state.darkMode ? 'true' : 'false'}</DarkMode>\n`;
+      xml += `  <Products>\n`;
+      state.products.forEach(p => {
+        const rawBase64 = p.photo && p.photo.includes(',') ? p.photo.split(',')[1] : (p.photo || '');
+        xml += `    <ProductItem>\n      <Id>${escapeXml(p.id)}</Id>\n      <Name>${escapeXml(p.name)}</Name>\n`;
+        if (rawBase64) xml += `      <PhotoBase64>${escapeXml(rawBase64)}</PhotoBase64>\n`;
+        xml += `    </ProductItem>\n`;
+      });
+      xml += `  </Products>\n  <Rooms>\n`;
+      state.rooms.forEach(r => {
+        xml += `    <RoomData>\n      <Id>${escapeXml(r.id)}</Id>\n      <Name>${escapeXml(r.name)}</Name>\n      <Note>${escapeXml(r.note || '')}</Note>\n      <Items>\n`;
+        Object.keys(r.items || {}).forEach(pid => {
+          xml += `        <RoomProductEntry>\n          <ProductId>${escapeXml(pid)}</ProductId>\n          <Quantity>${Number(r.items[pid]) || 0}</Quantity>\n        </RoomProductEntry>\n`;
+        });
+        xml += `      </Items>\n    </RoomData>\n`;
+      });
+      xml += `  </Rooms>\n</InventoryStore>`;
+
+      const blob = new Blob([xml], { type: 'application/xml;charset=utf-8;' });
       document.getElementById('backupMenu').classList.add('hidden');
-      showToast('Fotoğraflı yedek dosyası indirildi', 'success');
+      await downloadOrShareFile(blob, 'envanter_verisi.xml');
+      showToast('PC (.exe) uyumlu envanter_verisi.xml indirildi', 'success');
     }
 
-    function importJSONBackup(event) {
+    // HEM PC (.xml) HEM JSON (.json) YEDEĞİNİ İÇE AKTARMA
+    function importBackupFile(event) {
       const file = event.target.files?.[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = async (e) => {
         try {
-          const parsed = JSON.parse(e.target.result);
-          if (!Array.isArray(parsed.rooms) || !Array.isArray(parsed.products)) {
-            throw new Error('Geçersiz yedek dosyası');
+          const text = e.target.result.trim();
+          if (text.startsWith('<')) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(text, 'application/xml');
+            const products = [...doc.querySelectorAll('ProductItem')].map(node => {
+              const id = node.querySelector('Id')?.textContent || ('p_' + Date.now());
+              const name = node.querySelector('Name')?.textContent || 'Ürün';
+              const b64 = node.querySelector('PhotoBase64')?.textContent || '';
+              return {
+                id,
+                name,
+                photo: b64 ? (b64.startsWith('data:') ? b64 : `data:image/jpeg;base64,${b64}`) : null
+              };
+            });
+            const rooms = [...doc.querySelectorAll('RoomData')].map(node => {
+              const id = node.querySelector('Id')?.textContent || ('r_' + Date.now());
+              const name = node.querySelector('Name')?.textContent || 'Oda';
+              const note = node.querySelector('Note')?.textContent || '';
+              const items = {};
+              node.querySelectorAll('RoomProductEntry').forEach(entry => {
+                const pid = entry.querySelector('ProductId')?.textContent;
+                const qty = parseInt(entry.querySelector('Quantity')?.textContent || '0', 10);
+                if (pid) items[pid] = qty;
+              });
+              return { id, name, note, items };
+            });
+            state.products = products;
+            state.rooms = rooms;
+          } else {
+            const parsed = JSON.parse(text);
+            if (!Array.isArray(parsed.rooms) || !Array.isArray(parsed.products)) {
+              throw new Error('Geçersiz dosya');
+            }
+            state = { ...state, ...parsed };
           }
-          state = { ...state, ...parsed, currentRoomId: null };
+          state.currentRoomId = null;
           await saveState();
           renderAll();
           document.getElementById('backupMenu').classList.add('hidden');
-          showToast('Yedek başarıyla yüklendi!', 'success');
+          showToast('Veriler başarıyla yüklendi!', 'success');
         } catch (err) {
-          showToast('Yedek dosyası okunamadı!', 'error');
+          showToast('Dosya okunamadı!', 'error');
         }
       };
       reader.readAsText(file);
@@ -1692,9 +1697,6 @@
       showToast('Tüm veriler sıfırlandı', 'info');
     }
 
-    /**************************************************************
-     * YARDIMCI FONKSİYONLAR (TOAST & XSS KORUMASI)
-     **************************************************************/
     function escapeHtml(str) {
       return String(str || '')
         .replace(/&/g, '&amp;')
@@ -1704,13 +1706,17 @@
         .replace(/'/g, '&#039;');
     }
 
+    function escapeXml(str) {
+      return escapeHtml(str);
+    }
+
     function showToast(message, type = 'info') {
       const container = document.getElementById('toastContainer');
       const toast = document.createElement('div');
       const colors = {
         success: 'bg-emerald-600 text-white',
         error: 'bg-rose-600 text-white',
-        info: 'bg-slate-800 text-white'
+        info: 'bg-slate-800 text-white border border-slate-700'
       };
       toast.className = `${colors[type] || colors.info} px-4 py-3 rounded-xl shadow-lg text-xs sm:text-sm font-semibold flex items-center justify-between gap-3 pointer-events-auto transition duration-300`;
       toast.innerHTML = `<span>${escapeHtml(message)}</span>`;
@@ -1718,10 +1724,9 @@
       setTimeout(() => {
         toast.classList.add('opacity-0', 'translate-y-2');
         setTimeout(() => toast.remove(), 300);
-      }, 2600);
+      }, 2500);
     }
 
-    // Dışarı tıklandığında ayarlar menüsünü kapat
     document.addEventListener('click', (e) => {
       const menu = document.getElementById('backupMenu');
       if (menu && !menu.classList.contains('hidden')) {
@@ -1731,14 +1736,9 @@
       }
     });
 
-    // Başlangıç
     (async function init() {
-      const hasSaved = await loadState();
-      if (!hasSaved) {
-        await loadDemoData(false);
-      } else {
-        renderAll();
-      }
+      await loadState();
+      renderAll();
     })();
   </script>
 </body>

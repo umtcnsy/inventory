@@ -1,0 +1,63 @@
+name: Build Android APK & Publish Release
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Build Android APK with Capacitor
+        run: |
+          mkdir -p www
+          cp index.html manifest.json sw.js icon.svg www/
+          npm init -y
+          npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+          npx cap init "Envanter Sayim" "com.umtcnsy.envantersayim" --web-dir www
+          npx cap add android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../EnvanterSayim.apk
+
+      - name: Upload EnvanterSayim.apk Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EnvanterSayim-Android-APK
+          path: EnvanterSayim.apk
+
+      - name: Publish APK & EXE to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0
+          name: "Envanter Sayım (Android APK + Windows EXE)"
+          body: |
+            ### 📱 Telefonda Kullanım (Android APK)
+            Aşağıdaki **`EnvanterSayim.apk`** dosyasını telefonunuza indirip kurabilirsiniz.
+
+            ### 💻 Bilgisayarda Kullanım (Windows EXE)
+            Aşağıdaki **`EnvanterSayim.exe`** dosyasını Windows bilgisayarınıza indirip doğrudan çalıştırabilirsiniz.
+          files: |
+            EnvanterSayim.apk
+            EnvanterSayim.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
