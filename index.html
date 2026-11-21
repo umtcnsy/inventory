@@ -21,15 +21,17 @@
   </script>
   <style>
     :root {
-      --col-primary: #0ea5e9;
-      --col-primary-hover: #0284c7;
-      --col-primary-soft: rgba(14, 165, 233, 0.16);
-      --col-secondary: #14b8a6;
-      --col-secondary-soft: rgba(20, 184, 166, 0.18);
-      --bg-app: #071626;
-      --bg-card: #0e2740;
-      --bg-surface: #173d61;
-      --border-app: #245a8c;
+      --col-primary: #f4f4f5;
+      --col-primary-fore: #09090b;
+      --col-primary-hover: #e4e4e7;
+      --col-primary-soft: rgba(244, 244, 245, 0.14);
+      --col-secondary: #a1a1aa;
+      --col-secondary-fore: #09090b;
+      --col-secondary-soft: rgba(161, 161, 170, 0.18);
+      --bg-app: #08080a;
+      --bg-card: #121215;
+      --bg-surface: #1e1e24;
+      --border-app: #2c2c34;
     }
     body.bg-slate-100, html.dark body.dark\:bg-slate-900 {
       background-color: var(--bg-app) !important;
@@ -45,14 +47,14 @@
     }
     .btn-primary {
       background-color: var(--col-primary);
-      color: #ffffff;
+      color: var(--col-primary-fore);
     }
     .btn-primary:hover {
       background-color: var(--col-primary-hover);
     }
     .btn-secondary {
       background-color: var(--col-secondary);
-      color: #ffffff;
+      color: var(--col-secondary-fore);
     }
     .badge-primary {
       background-color: var(--col-primary-soft);
@@ -91,12 +93,12 @@
   <!-- ÜST BAR (SOL ÜSTTE AYARLAR BUTONU İLE) -->
   <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30 shadow-sm">
     <div class="max-w-5xl mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
-      <!-- SOL ÜST: AYARLAR BUTONU + BAŞLIK -->
-      <div class="flex items-center gap-2.5 min-w-0">
-        <button id="topLeftSettingsBtn" onclick="openSettingsModal()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl badge-primary border font-bold text-xs sm:text-sm shrink-0 shadow-xs transition">
-          <i data-lucide="settings" class="w-4 h-4"></i>
+      <!-- SOL ÜST: KUTUCUKSUZ SADECE YAZI AYARLAR + BAŞLIK -->
+      <div class="flex items-center gap-3 min-w-0">
+        <button id="topLeftSettingsBtn" onclick="openSettingsModal()" class="bg-transparent border-0 p-1 font-extrabold text-sm sm:text-base text-slate-900 dark:text-white hover:opacity-75 transition shrink-0">
           <span id="lblSettingsBtn">Ayarlar</span>
         </button>
+        <span class="text-slate-400 dark:text-slate-600 select-none">|</span>
 
         <div class="truncate">
           <h1 id="lblAppTitle" class="font-extrabold text-sm sm:text-lg leading-tight text-slate-900 dark:text-white truncate">Envanter Sayım</h1>
@@ -595,55 +597,59 @@
     const STORE_NAME = 'appState';
     const STATE_KEY = 'inventoryData_v4';
 
-    // 4 İkili Renk Paleti Tanımları (Arayüz Arka Plan, Kart ve Buton Renkleriyle)
+    // 4 Şık İkili Renk Paleti (Siyah Ağırlıklı Modern Temalar)
     const DUAL_COLOR_THEMES = [
       {
         id: 0,
-        nameTR: 'Okyanus Mavisi & Turkuaz',
-        nameEN: 'Ocean Blue & Teal',
-        primary: '#0ea5e9',
-        primaryHover: '#0284c7',
-        primarySoft: 'rgba(14, 165, 233, 0.16)',
-        secondary: '#14b8a6',
-        secondarySoft: 'rgba(20, 184, 166, 0.18)',
-        darkBg: '#071626', darkCard: '#0e2740', darkSurface: '#173d61', darkBorder: '#245a8c',
-        lightBg: '#e0f2fe', lightCard: '#f0fdfa', lightSurface: '#bae6fd', lightBorder: '#7dd3fc'
+        nameTR: 'Saf Siyah & Beyaz (Mat Karbon)',
+        nameEN: 'Pure Black & White (Matte Carbon)',
+        darkPrimary: '#f4f4f5', darkPrimaryFore: '#09090b', darkPrimaryHover: '#e4e4e7',
+        lightPrimary: '#18181b', lightPrimaryFore: '#ffffff', lightPrimaryHover: '#27272a',
+        darkSecondary: '#a1a1aa', darkSecondaryFore: '#09090b',
+        lightSecondary: '#52525b', lightSecondaryFore: '#ffffff',
+        primarySoft: 'rgba(161, 161, 170, 0.18)',
+        secondarySoft: 'rgba(161, 161, 170, 0.18)',
+        darkBg: '#08080a', darkCard: '#121215', darkSurface: '#1e1e24', darkBorder: '#2c2c34',
+        lightBg: '#f4f4f5', lightCard: '#ffffff', lightSurface: '#e4e4e7', lightBorder: '#d4d4d8'
       },
       {
         id: 1,
-        nameTR: 'Zümrüt Yeşili & Altın Kehribar',
-        nameEN: 'Emerald Green & Amber Gold',
-        primary: '#10b981',
-        primaryHover: '#059669',
-        primarySoft: 'rgba(16, 185, 129, 0.16)',
-        secondary: '#f59e0b',
+        nameTR: 'Siyah & Altın',
+        nameEN: 'Matte Black & Gold',
+        darkPrimary: '#eab308', darkPrimaryFore: '#0f0f0c', darkPrimaryHover: '#ca8a04',
+        lightPrimary: '#b45309', lightPrimaryFore: '#ffffff', lightPrimaryHover: '#92400e',
+        darkSecondary: '#f59e0b', darkSecondaryFore: '#0f0f0c',
+        lightSecondary: '#292524', lightSecondaryFore: '#ffffff',
+        primarySoft: 'rgba(234, 179, 8, 0.16)',
         secondarySoft: 'rgba(245, 158, 11, 0.18)',
-        darkBg: '#061c16', darkCard: '#0c3026', darkSurface: '#154a3a', darkBorder: '#227359',
-        lightBg: '#d1fae5', lightCard: '#fffbeb', lightSurface: '#a7f3d0', lightBorder: '#6ee7b7'
+        darkBg: '#090908', darkCard: '#141310', darkSurface: '#24211b', darkBorder: '#3e3624',
+        lightBg: '#fafaf9', lightCard: '#ffffff', lightSurface: '#f5f5f4', lightBorder: '#d6d3d1'
       },
       {
         id: 2,
-        nameTR: 'Kızıl Rose & Gün Batımı Turuncu',
-        nameEN: 'Crimson Rose & Sunset Orange',
-        primary: '#f43f5e',
-        primaryHover: '#e11d48',
-        primarySoft: 'rgba(244, 63, 94, 0.16)',
-        secondary: '#f97316',
-        secondarySoft: 'rgba(249, 115, 22, 0.18)',
-        darkBg: '#1f0913', darkCard: '#34101f', darkSurface: '#521a30', darkBorder: '#80294a',
-        lightBg: '#ffe4e6', lightCard: '#fff7ed', lightSurface: '#fecdd3', lightBorder: '#fda4af'
+        nameTR: 'Siyah & Kırmızı',
+        nameEN: 'Obsidian Black & Red',
+        darkPrimary: '#dc2626', darkPrimaryFore: '#ffffff', darkPrimaryHover: '#b91c1c',
+        lightPrimary: '#b91c1c', lightPrimaryFore: '#ffffff', lightPrimaryHover: '#991b1b',
+        darkSecondary: '#f87171', darkSecondaryFore: '#09090b',
+        lightSecondary: '#1e293b', lightSecondaryFore: '#ffffff',
+        primarySoft: 'rgba(220, 38, 38, 0.16)',
+        secondarySoft: 'rgba(248, 113, 113, 0.18)',
+        darkBg: '#0a0809', darkCard: '#161012', darkSurface: '#261a1e', darkBorder: '#44262e',
+        lightBg: '#f8fafc', lightCard: '#ffffff', lightSurface: '#f1f5f9', lightBorder: '#cbd5e1'
       },
       {
         id: 3,
-        nameTR: 'Kraliyet Moru & Fuşya Pembe',
-        nameEN: 'Royal Purple & Fuchsia Pink',
-        primary: '#8b5cf6',
-        primaryHover: '#7c3aed',
-        primarySoft: 'rgba(139, 92, 246, 0.16)',
-        secondary: '#ec4899',
-        secondarySoft: 'rgba(236, 72, 153, 0.18)',
-        darkBg: '#140a26', darkCard: '#251245', darkSurface: '#3a1e6b', darkBorder: '#5b30a6',
-        lightBg: '#ede9fe', lightCard: '#fdf2f8', lightSurface: '#ddd6fe', lightBorder: '#c4b5fd'
+        nameTR: 'Gece Mavisi & Turkuaz',
+        nameEN: 'Midnight Blue & Cyan',
+        darkPrimary: '#0ea5e9', darkPrimaryFore: '#ffffff', darkPrimaryHover: '#0284c7',
+        lightPrimary: '#0284c7', lightPrimaryFore: '#ffffff', lightPrimaryHover: '#0369a1',
+        darkSecondary: '#14b8a6', darkSecondaryFore: '#ffffff',
+        lightSecondary: '#0d9488', lightSecondaryFore: '#ffffff',
+        primarySoft: 'rgba(14, 165, 233, 0.16)',
+        secondarySoft: 'rgba(20, 184, 166, 0.18)',
+        darkBg: '#090e1a', darkCard: '#11192c', darkSurface: '#1c2944', darkBorder: '#2c4066',
+        lightBg: '#f1f5f9', lightCard: '#ffffff', lightSurface: '#e2e8f0', lightBorder: '#cbd5e1'
       }
     ];
 
@@ -673,6 +679,24 @@
 
     function T(tr, en) {
       return isEN() ? en : tr;
+    }
+
+    function L(raw) {
+      if (!raw) return '';
+      if (!isEN()) return raw;
+      let val = String(raw);
+      if (val.toLowerCase() === 'ana envanter odası') return 'Main Inventory Room';
+      if (val.toLowerCase() === 'aktif') return 'Active';
+      if (val.toLowerCase() === 'depoda') return 'In Stock';
+      if (val.toLowerCase() === 'arızalı') return 'Broken';
+      if (val.toLowerCase() === 'zimmetli') return 'Assigned';
+      val = val.replace(/kablosuz klavye/ig, 'wireless keyboard');
+      val = val.replace(/kablolu klavye/ig, 'wired keyboard');
+      val = val.replace(/kablosuz mouse/ig, 'wireless mouse');
+      val = val.replace(/kablolu mouse/ig, 'wired mouse');
+      val = val.replace(/kulaklık/ig, 'headset');
+      val = val.replace(/klavye/ig, 'keyboard');
+      return val;
     }
 
     // SADECE ADI "LAPTOP" İÇEREN ÜRÜNLERDE SERİ NO TABLOSU AKTİF OLSUN
@@ -792,17 +816,22 @@
       }
 
       const theme = DUAL_COLOR_THEMES[state.colorTheme] || DUAL_COLOR_THEMES[0];
-      htmlEl.style.setProperty('--col-primary', theme.primary);
-      htmlEl.style.setProperty('--col-primary-hover', theme.primaryHover);
+      const dark = state.darkMode;
+      htmlEl.style.setProperty('--col-primary', dark ? theme.darkPrimary : theme.lightPrimary);
+      htmlEl.style.setProperty('--col-primary-fore', dark ? theme.darkPrimaryFore : theme.lightPrimaryFore);
+      htmlEl.style.setProperty('--col-primary-hover', dark ? theme.darkPrimaryHover : theme.lightPrimaryHover);
       htmlEl.style.setProperty('--col-primary-soft', theme.primarySoft);
-      htmlEl.style.setProperty('--col-secondary', theme.secondary);
+      htmlEl.style.setProperty('--col-secondary', dark ? theme.darkSecondary : theme.lightSecondary);
+      htmlEl.style.setProperty('--col-secondary-fore', dark ? theme.darkSecondaryFore : theme.lightSecondaryFore);
       htmlEl.style.setProperty('--col-secondary-soft', theme.secondarySoft);
-      htmlEl.style.setProperty('--bg-app', state.darkMode ? theme.darkBg : theme.lightBg);
-      htmlEl.style.setProperty('--bg-card', state.darkMode ? theme.darkCard : theme.lightCard);
-      htmlEl.style.setProperty('--bg-surface', state.darkMode ? theme.darkSurface : theme.lightSurface);
-      htmlEl.style.setProperty('--border-app', state.darkMode ? theme.darkBorder : theme.lightBorder);
+      htmlEl.style.setProperty('--bg-app', dark ? theme.darkBg : theme.lightBg);
+      htmlEl.style.setProperty('--bg-card', dark ? theme.darkCard : theme.lightCard);
+      htmlEl.style.setProperty('--bg-surface', dark ? theme.darkSurface : theme.lightSurface);
+      htmlEl.style.setProperty('--border-app', dark ? theme.darkBorder : theme.lightBorder);
 
-      // Statik metinleri güncelle
+      document.title = T('Envanter & Oda Sayım Uygulaması', 'Inventory & Room Counting App');
+
+      // Tüm statik metinleri ve modalları güncelle
       document.getElementById('lblSettingsBtn').textContent = T('Ayarlar', 'Settings');
       document.getElementById('lblAppTitle').textContent = T('Envanter Sayım', 'Inventory Count');
       document.getElementById('lblAppSubtitle').textContent = T('Oda & Laptop Seri No Takip', 'Room & Laptop Serial Tracker');
@@ -839,12 +868,12 @@
       document.querySelectorAll('.lblSaveBtn').forEach(el => el.textContent = T('Kaydet', 'Save'));
 
       // Ayarlar Modalı metinleri
-      document.getElementById('lblSettingsModalTitle').textContent = T('Uygulama Ayarları', 'Application Settings');
-      document.getElementById('lblLangSection').textContent = T('🌐 Dil Seçeneği / Language', '🌐 Interface Language');
-      document.getElementById('lblModeSection').textContent = T('🌓 Görünüm Modu', '🌓 Appearance Mode');
+      document.getElementById('lblSettingsModalTitle').textContent = T('Ayarlar', 'Settings');
+      document.getElementById('lblLangSection').textContent = T('Arayüz Dili', 'Interface Language');
+      document.getElementById('lblModeSection').textContent = T('Görünüm Modu', 'Appearance Mode');
       document.getElementById('lblDarkBtn').textContent = T('Koyu Mod', 'Dark Mode');
       document.getElementById('lblLightBtn').textContent = T('Açık Mod', 'Light Mode');
-      document.getElementById('lblColorSection').textContent = T('🎨 4 İkili Renk Opsiyonu', '🎨 4 Dual-Color Themes');
+      document.getElementById('lblColorSection').textContent = T('4 İkili Renk Seçeneği', '4 Dual-Color Themes');
       document.getElementById('lblBackupDownload').textContent = T('PC XML İndir', 'Export PC XML');
       document.getElementById('lblBackupUpload').textContent = T('Yedek Yükle', 'Import Backup');
       document.getElementById('lblRestoreDefault').textContent = T('Inventory Geri Yükle', 'Restore Inventory');
@@ -852,12 +881,28 @@
 
       // Seri No Tablosu metinleri
       document.getElementById('lblSerialNoInput').textContent = T('SERİ NO *', 'SERIAL NO *');
+      document.getElementById('serialNoInput').placeholder = T('Örn: SN-49201', 'e.g. SN-49201');
       document.getElementById('lblStatusInput').textContent = T('DURUM', 'STATUS');
       document.getElementById('serialStatusInput').placeholder = T('Örn: Aktif, Depoda, Arızalı...', 'e.g. Active, In Stock, Broken...');
+      document.getElementById('btnCancelSerialEdit').textContent = T('İptal', 'Cancel');
       document.getElementById('thSerialNo').textContent = T('SERİ NO', 'SERIAL NO');
       document.getElementById('thStatus').textContent = T('DURUM', 'STATUS');
       document.getElementById('thActions').textContent = T('DÜZELT / SİL', 'EDIT / DEL');
       document.getElementById('btnCloseSerialModal').textContent = T('Tamam / Kapat', 'Done / Close');
+
+      // Oda ve Ürün Ekleme Modalları
+      document.getElementById('lblRoomNameField').textContent = T('Oda / Bölüm Adı *', 'Room / Location Name *');
+      document.getElementById('lblRoomNoteField').textContent = T('Açıklama (İsteğe Bağlı)', 'Note (Optional)');
+      document.getElementById('lblAddProdModalTitle').textContent = T('Odaya Ürün Ekle', 'Add Item to Room');
+      document.getElementById('lblAddProdModalSub').textContent = T('Daha önce eklenen ürünlerden seçin veya yeni ürün tanımlayın.', 'Select from existing products or create a new one.');
+      document.getElementById('pickerSearchInput').placeholder = T('Ürün adı yazın...', 'Type product name...');
+      document.getElementById('lblRegisteredProds').textContent = T('Kayıtlı Ürünler', 'Registered Products');
+      document.getElementById('lblCreateNewInRoom').textContent = T('Listede Yok mu? Yeni Ürün Oluştur & Ekle', 'Not in List? Create New Product & Add');
+      document.getElementById('newRoomProductName').placeholder = T('Yeni ürün adı...', 'New product name...');
+      document.getElementById('newRoomPhotoLabel').textContent = T('Fotoğraf Çek / Seç', 'Take / Pick Photo');
+      document.getElementById('lblCreateAndAddBtn').textContent = T('Yeni Ürünü Oluştur ve Odaya Ekle', 'Create Product & Add to Room');
+      document.getElementById('catalogProductNameInput').placeholder = T('Örn: dell laptop', 'e.g. dell laptop');
+      document.getElementById('lblPickCatalogPhoto').textContent = T('Fotoğraf Çek / Yükle', 'Take / Upload Photo');
 
       renderSettingsControls();
     }
@@ -904,16 +949,19 @@
       const container = document.getElementById('colorThemesContainer');
       container.innerHTML = DUAL_COLOR_THEMES.map(t => {
         const active = state.colorTheme === t.id;
+        const swatchBg = state.darkMode ? t.darkBg : t.lightBg;
+        const swatchPrimary = state.darkMode ? t.darkPrimary : t.lightPrimary;
+        const badgeFore = state.darkMode ? t.darkPrimaryFore : t.lightPrimaryFore;
         return `
-          <button onclick="setColorTheme(${t.id})" class="w-full p-2.5 rounded-xl border ${active ? 'border-2 border-white ring-2 ring-offset-1 ring-slate-400 bg-slate-100 dark:bg-slate-700' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50'} flex items-center justify-between transition">
+          <button onclick="setColorTheme(${t.id})" class="w-full p-2.5 rounded-xl border ${active ? 'border-2 border-white ring-1 ring-slate-400 bg-slate-100 dark:bg-slate-700' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50'} flex items-center justify-between transition">
             <div class="flex items-center gap-2.5">
               <div class="flex items-center -space-x-1">
-                <span class="w-6 h-6 rounded-full border-2 border-white shadow" style="background:${t.primary}"></span>
-                <span class="w-6 h-6 rounded-full border-2 border-white shadow" style="background:${t.secondary}"></span>
+                <span class="w-6 h-6 rounded-full border-2 border-slate-400 shadow" style="background:${swatchBg}"></span>
+                <span class="w-6 h-6 rounded-full border-2 border-slate-400 shadow" style="background:${swatchPrimary}"></span>
               </div>
               <span class="text-xs sm:text-sm font-bold text-slate-800 dark:text-white">${isEN() ? t.nameEN : t.nameTR}</span>
             </div>
-            ${active ? `<span class="text-xs font-extrabold px-2 py-0.5 rounded-md text-white" style="background:${t.primary}">✓</span>` : ''}
+            ${active ? `<span class="text-xs font-extrabold px-2 py-0.5 rounded-md" style="background:${swatchPrimary};color:${badgeFore}">✓</span>` : ''}
           </button>
         `;
       }).join('');
@@ -1073,7 +1121,7 @@
                 </div>
                 <div class="min-w-0">
                   <h3 class="font-bold text-slate-900 dark:text-white truncate">${escapeHtml(room.name)}</h3>
-                  <p class="text-xs text-slate-500 dark:text-slate-400 truncate">${room.note ? escapeHtml(room.note) : T('Oda envanteri', 'Room inventory')}</p>
+                  <p class="text-xs text-slate-500 dark:text-slate-400 truncate">${room.note ? escapeHtml(L(room.note)) : T('Oda envanteri', 'Room inventory')}</p>
                 </div>
               </div>
               <i data-lucide="chevron-right" class="w-5 h-5 text-slate-400 shrink-0"></i>
@@ -1240,9 +1288,10 @@
         .filter(Boolean)
         .filter(item =>
           item.name.toLowerCase().includes(query) ||
+          L(item.name).toLowerCase().includes(query) ||
           item.serials.some(sr =>
             (sr.serialNo || '').toLowerCase().includes(query) ||
-            (sr.status || '').toLowerCase().includes(query)
+            L(sr.status || '').toLowerCase().includes(query)
           )
         );
 
@@ -1265,7 +1314,7 @@
         container.innerHTML = roomProducts.map(item => {
           const sCount = item.serials.length;
           const previewText = item.isLaptop && sCount > 0
-            ? item.serials.slice(0, 3).map((sr, idx) => `#${idx + 1} ${sr.serialNo} (${sr.status})`).join(' | ')
+            ? item.serials.slice(0, 3).map((sr, idx) => `#${idx + 1} ${sr.serialNo} (${L(sr.status)})`).join(' | ')
             : '';
 
           return `
@@ -1273,7 +1322,7 @@
               <div class="flex items-center gap-3 min-w-0 flex-1">
                 ${renderProductThumbnail(item, 'w-14 h-14 sm:w-16 sm:h-16 rounded-xl')}
                 <div class="min-w-0 flex-1">
-                  <h4 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base leading-snug break-words">${escapeHtml(item.name)}</h4>
+                  <h4 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base leading-snug break-words">${escapeHtml(L(item.name))}</h4>
                   ${previewText
                     ? `<p onclick="openSerialTableModal('${room.id}', '${item.id}')" class="text-[11px] font-bold text-theme-secondary truncate mt-0.5 cursor-pointer">📋 ${escapeHtml(previewText)}</p>`
                     : ''
@@ -1342,7 +1391,7 @@
 
               <div class="p-3 flex-1 flex flex-col justify-between gap-2">
                 <div>
-                  <h4 class="font-bold text-slate-900 dark:text-white text-xs sm:text-sm leading-snug line-clamp-1">${escapeHtml(item.name)}</h4>
+                  <h4 class="font-bold text-slate-900 dark:text-white text-xs sm:text-sm leading-snug line-clamp-1">${escapeHtml(L(item.name))}</h4>
                   ${item.isLaptop
                     ? `<button onclick="openSerialTableModal('${room.id}', '${item.id}')" class="mt-1.5 w-full py-1.5 px-2 rounded-lg ${sCount > 0 ? 'btn-secondary' : 'badge-primary border'} text-[11px] font-bold flex items-center justify-center gap-1 transition">
                          <i data-lucide="table-2" class="w-3.5 h-3.5"></i>
@@ -1390,7 +1439,7 @@
       activeSerialProductId = productId;
       editingSerialRowId = null;
 
-      document.getElementById('serialModalTitle').textContent = `${product.name.toUpperCase()} — ${T('SERİ NO TABLOSU', 'SERIAL NO TABLE')}`;
+      document.getElementById('serialModalTitle').textContent = `${L(product.name).toUpperCase()} — ${T('SERİ NO TABLOSU', 'SERIAL NO TABLE')}`;
       document.getElementById('serialModalRoomBadge').textContent = `${T('Oda', 'Room')}: ${room.name}`;
       document.getElementById('serialModalImg').src = product.photo || '';
       document.getElementById('serialNoInput').value = '';
@@ -1439,7 +1488,7 @@
           <tr class="${isEditing ? 'bg-amber-50 dark:bg-amber-950/40' : 'bg-white dark:bg-slate-800'}">
             <td class="py-2.5 px-3 text-center font-extrabold text-theme-secondary border-r-2 border-slate-800 dark:border-slate-400">${idx + 1}</td>
             <td class="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-white border-r-2 border-slate-800 dark:border-slate-400 break-all">${escapeHtml(sr.serialNo)}</td>
-            <td class="py-2.5 px-3 text-slate-700 dark:text-slate-200 border-r-2 border-slate-800 dark:border-slate-400 break-words">${escapeHtml(sr.status)}</td>
+            <td class="py-2.5 px-3 text-slate-700 dark:text-slate-200 border-r-2 border-slate-800 dark:border-slate-400 break-words">${escapeHtml(L(sr.status))}</td>
             <td class="py-2 px-2 text-center">
               <div class="flex items-center justify-center gap-1">
                 <button type="button" onclick="startEditSerialRow('${sr.id}')" class="px-2 py-1 rounded bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-bold text-[11px]" title="${T('Düzelt', 'Edit')}">
@@ -1650,7 +1699,7 @@
                 : `<div class="w-11 h-11 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 shrink-0"><i data-lucide="package" class="w-5 h-5"></i></div>`
               }
               <div class="min-w-0 flex-1">
-                <p class="font-bold text-slate-900 dark:text-white text-sm truncate">${escapeHtml(product.name)}</p>
+                <p class="font-bold text-slate-900 dark:text-white text-sm truncate">${escapeHtml(L(product.name))}</p>
                 <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                   ${otherRoomsWithProduct.length > 0
                     ? `${T('Diğer odalar', 'Other rooms')}: ${escapeHtml(otherRoomsWithProduct.join(', '))}`
@@ -1741,7 +1790,7 @@
     function renderCatalog() {
       const container = document.getElementById('catalogContainer');
       const query = (document.getElementById('catalogSearchInput')?.value || '').trim().toLowerCase();
-      const filtered = state.products.filter(p => p.name.toLowerCase().includes(query));
+      const filtered = state.products.filter(p => p.name.toLowerCase().includes(query) || L(p.name).toLowerCase().includes(query));
 
       if (state.viewMode === 'list') {
         container.className = 'space-y-2.5';
@@ -1753,13 +1802,13 @@
               <div class="flex items-center gap-3 min-w-0 flex-1">
                 ${renderProductThumbnail(product, 'w-14 h-14 rounded-xl')}
                 <div class="min-w-0 flex-1">
-                  <h4 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">${escapeHtml(product.name)}</h4>
+                  <h4 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">${escapeHtml(L(product.name))}</h4>
                   <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">${roomCount} ${T('oda', 'rooms')} • <strong class="text-theme-secondary">${totalAcrossRooms}</strong></p>
                 </div>
               </div>
               <div class="flex items-center gap-1.5 shrink-0">
                 <button onclick="openEditCatalogProductModal('${product.id}')" class="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold">
-                  ✏️ ${T('Düzenle', 'Edit')}
+                  ${T('Düzenle', 'Edit')}
                 </button>
                 <button onclick="deleteProductFromCatalog('${product.id}')" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-rose-500">
                   <i data-lucide="trash-2" class="w-4 h-4"></i>
@@ -1781,7 +1830,7 @@
                 }
               </div>
               <div class="p-3 space-y-2">
-                <h4 class="font-bold text-slate-900 dark:text-white text-xs sm:text-sm truncate">${escapeHtml(product.name)}</h4>
+                <h4 class="font-bold text-slate-900 dark:text-white text-xs sm:text-sm truncate">${escapeHtml(L(product.name))}</h4>
                 <p class="text-[11px] font-bold text-theme-secondary">${T('Toplam', 'Total')}: ${totalAcrossRooms}</p>
                 <div class="flex items-center gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-700">
                   <button onclick="openEditCatalogProductModal('${product.id}')" class="flex-1 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 text-xs font-bold">${T('Düzenle', 'Edit')}</button>
@@ -1938,9 +1987,10 @@
         })
         .filter(item =>
           item.name.toLowerCase().includes(query) ||
+          L(item.name).toLowerCase().includes(query) ||
           item.breakdown.some(b => b.serials.some(sr =>
             (sr.serialNo || '').toLowerCase().includes(query) ||
-            (sr.status || '').toLowerCase().includes(query)
+            L(sr.status || '').toLowerCase().includes(query)
           ))
         );
 
@@ -1951,7 +2001,7 @@
             <div class="flex items-center gap-3 min-w-0 flex-1">
               ${renderProductThumbnail(item, 'w-14 h-14 rounded-xl')}
               <div class="min-w-0 flex-1">
-                <h4 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base">${escapeHtml(item.name)}</h4>
+                <h4 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base">${escapeHtml(L(item.name))}</h4>
                 <div class="flex flex-wrap gap-1.5 mt-1.5">
                   ${item.breakdown.map(b => `
                     <button onclick="switchTab('rooms'); openRoomDetail('${b.roomId}')" class="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-xs font-medium">
@@ -1962,7 +2012,7 @@
                 ${item.isLaptop && item.breakdown.some(b => b.serials.length > 0)
                   ? `<div class="mt-1.5 space-y-0.5">
                        ${item.breakdown.filter(b => b.serials.length > 0).map(b => `
-                         <p class="text-[11px] text-theme-secondary font-bold truncate">📋 ${escapeHtml(b.roomName)}: ${escapeHtml(b.serials.map((sr, i) => `#${i + 1} ${sr.serialNo} [${sr.status}]`).join(' | '))}</p>
+                         <p class="text-[11px] text-theme-secondary font-bold truncate">${escapeHtml(b.roomName)}: ${escapeHtml(b.serials.map((sr, i) => `#${i + 1} ${sr.serialNo} [${L(sr.status)}]`).join(' | '))}</p>
                        `).join('')}
                      </div>`
                   : ''
@@ -1985,7 +2035,7 @@
               </div>
             </div>
             <div class="p-3">
-              <h4 class="font-bold text-slate-900 dark:text-white text-xs sm:text-sm truncate">${escapeHtml(item.name)}</h4>
+              <h4 class="font-bold text-slate-900 dark:text-white text-xs sm:text-sm truncate">${escapeHtml(L(item.name))}</h4>
             </div>
           </div>
         `).join('');
@@ -1996,7 +2046,7 @@
     function openLightbox(productId) {
       const product = state.products.find(p => p.id === productId);
       if (!product || !product.photo) return;
-      document.getElementById('lightboxTitle').textContent = product.name;
+      document.getElementById('lightboxTitle').textContent = L(product.name);
       document.getElementById('lightboxImage').src = product.photo;
       document.getElementById('lightboxModal').classList.remove('hidden');
     }
