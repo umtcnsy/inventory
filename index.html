@@ -14,6 +14,7 @@
   <script src="seed_data.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script>
     tailwind.config = {
       darkMode: 'class'
@@ -106,14 +107,20 @@
         </div>
       </div>
 
-      <!-- SAĞ ÜST: TELEFONA KUR & EXCEL İNDİR -->
+      <!-- SAĞ ÜST: TELEFONA KUR, EXCEL YÜKLE & EXCEL İNDİR -->
       <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-        <button id="pwaInstallBtn" onclick="installPWA()" class="hidden items-center gap-1.5 px-3 py-2 rounded-xl btn-primary text-xs font-bold shadow-sm transition">
+        <button id="pwaInstallBtn" onclick="installPWA()" class="hidden items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl btn-primary text-xs font-bold shadow-sm transition">
           <i data-lucide="smartphone" class="w-4 h-4"></i>
           <span id="lblInstallApp">Telefona Kur</span>
         </button>
 
-        <button onclick="exportCSV()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl btn-secondary text-xs sm:text-sm font-bold shadow-xs transition">
+        <label class="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl btn-primary text-xs sm:text-sm font-bold shadow-xs transition cursor-pointer">
+          <i data-lucide="upload" class="w-4 h-4"></i>
+          <span id="lblImportExcel">Excel Yükle</span>
+          <input id="excelImportInput" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="importExcelFile(event)" />
+        </label>
+
+        <button onclick="exportExcel()" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl btn-secondary text-xs sm:text-sm font-bold shadow-xs transition">
           <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
           <span id="lblExportExcel">Excel İndir</span>
         </button>
@@ -588,6 +595,35 @@
     </div>
   </div>
 
+  <!-- MODAL: EXCEL İÇE AKTARMA MODU SEÇİMİ -->
+  <div id="excelImportModal" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 id="lblExcelImportTitle" class="text-lg font-bold text-slate-900 dark:text-white">Excel İçe Aktarma</h3>
+        <button onclick="cancelExcelImport()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p id="lblExcelImportDesc" class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+        Excel verileri nasıl yüklensin? Ürün fotoğraflarınız her iki seçenekte de korunur.
+      </p>
+      <p id="lblExcelImportFileName" class="text-xs font-mono font-bold text-theme-secondary truncate px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700"></p>
+      <div class="space-y-2 pt-1">
+        <button onclick="confirmExcelImport(false)" class="w-full py-2.5 px-4 rounded-xl btn-primary text-xs sm:text-sm font-bold shadow-sm transition text-left flex items-center justify-between">
+          <span id="lblExcelMergeBtn">Mevcut Odalarla Birleştir / Güncelle</span>
+          <i data-lucide="git-merge" class="w-4 h-4 shrink-0"></i>
+        </button>
+        <button onclick="confirmExcelImport(true)" class="w-full py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white text-xs sm:text-sm font-bold transition text-left flex items-center justify-between">
+          <span id="lblExcelReplaceBtn">Odaları Temizle & Sadece Excel'i Yükle</span>
+          <i data-lucide="replace" class="w-4 h-4 shrink-0"></i>
+        </button>
+        <button onclick="cancelExcelImport()" class="w-full py-2 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs font-bold lblCancelBtn">
+          İptal
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- BİLDİRİM -->
   <div id="toastContainer" class="fixed bottom-4 right-4 left-4 sm:left-auto z-50 flex flex-col gap-2 pointer-events-none"></div>
 
@@ -836,7 +872,12 @@
       document.getElementById('lblAppTitle').textContent = T('Envanter Sayım', 'Inventory Count');
       document.getElementById('lblAppSubtitle').textContent = T('Oda & Laptop Seri No Takip', 'Room & Laptop Serial Tracker');
       document.getElementById('lblInstallApp').textContent = T('Telefona Kur', 'Install App');
+      document.getElementById('lblImportExcel').textContent = T('Excel Yükle', 'Import Excel');
       document.getElementById('lblExportExcel').textContent = T('Excel İndir', 'Export Excel');
+      document.getElementById('lblExcelImportTitle').textContent = T('Excel İçe Aktarma', 'Import from Excel');
+      document.getElementById('lblExcelImportDesc').textContent = T('Excel verileri nasıl yüklensin? Ürün fotoğraflarınız her iki seçenekte de korunur.', 'How would you like to import Excel data? Your product photos are preserved in both options.');
+      document.getElementById('lblExcelMergeBtn').textContent = T('Mevcut Odalarla Birleştir / Güncelle', 'Merge / Update Existing Rooms');
+      document.getElementById('lblExcelReplaceBtn').textContent = T("Odaları Temizle & Sadece Excel'i Yükle", 'Clear Rooms & Load Only Excel');
 
       document.getElementById('lblTabRooms').textContent = T('Odalar', 'Rooms');
       document.getElementById('lblTabCatalog').textContent = T('Ürün Havuzu', 'Product Pool');
@@ -1276,8 +1317,8 @@
         .map(pid => {
           const product = state.products.find(p => p.id === pid);
           if (!product) return null;
-          const isLaptop = isLaptopProduct(product.name);
           const serials = getRoomProductSerials(room, pid);
+          const isLaptop = isLaptopProduct(product.name) || serials.length > 0;
           return {
             ...product,
             isLaptop,
@@ -1973,15 +2014,18 @@
 
       const summaryItems = state.products
         .map(p => {
-          const isLaptop = isLaptopProduct(p.name);
           const breakdown = state.rooms
             .filter(r => r.items && Number(r.items[p.id]) > 0)
-            .map(r => ({
-              roomId: r.id,
-              roomName: r.name,
-              qty: Number(r.items[p.id]),
-              serials: isLaptop ? getRoomProductSerials(r, p.id) : []
-            }));
+            .map(r => {
+              const serials = getRoomProductSerials(r, p.id);
+              return {
+                roomId: r.id,
+                roomName: r.name,
+                qty: Number(r.items[p.id]),
+                serials
+              };
+            });
+          const isLaptop = isLaptopProduct(p.name) || breakdown.some(b => b.serials.length > 0);
           const total = breakdown.reduce((s, b) => s + b.qty, 0);
           return { ...p, isLaptop, total, breakdown };
         })
@@ -2075,23 +2119,355 @@
       URL.revokeObjectURL(url);
     }
 
-    async function exportCSV() {
-      const rows = [[T('Oda Adı', 'Room'), T('Açıklama', 'Note'), T('Ürün Adı', 'Product'), T('Adet', 'Quantity'), T('Seri No Tablosu (NO - SERİ NO - DURUM)', 'Serial Table (NO - SERIAL NO - STATUS)')]];
+    let pendingExcelSheets = null;
+
+    function normalizeSpaces(str) {
+      return String(str == null ? '' : str).trim().replace(/\s+/g, ' ');
+    }
+
+    function normalizeExcelHeader(str) {
+      return normalizeSpaces(str)
+        .replace(/[İıi]/g, 'I')
+        .replace(/[Üü]/g, 'U')
+        .replace(/[Öö]/g, 'O')
+        .replace(/[Şş]/g, 'S')
+        .replace(/[Ğğ]/g, 'G')
+        .replace(/[Çç]/g, 'C')
+        .toUpperCase();
+    }
+
+    function toEnglishName(raw) {
+      if (!raw) return '';
+      let val = normalizeSpaces(raw);
+      val = val.replace(/kablosuz klavye/ig, 'wireless keyboard');
+      val = val.replace(/kablolu klavye/ig, 'wired keyboard');
+      val = val.replace(/kablosuz mouse/ig, 'wireless mouse');
+      val = val.replace(/kablolu mouse/ig, 'wired mouse');
+      val = val.replace(/kulaklık/ig, 'headset');
+      val = val.replace(/klavye/ig, 'keyboard');
+      return val;
+    }
+
+    function findOrCreateRoomFromExcel(roomName) {
+      const normalized = normalizeSpaces(roomName);
+      const existing = state.rooms.find(r => normalizeSpaces(r.name).toLowerCase() === normalized.toLowerCase());
+      if (existing) return existing;
+      const created = {
+        id: 'r_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+        name: normalized,
+        note: '',
+        items: {},
+        serials: {}
+      };
+      state.rooms.push(created);
+      return created;
+    }
+
+    function findOrCreateProductFromExcel(rawName, stats) {
+      const clean = normalizeSpaces(rawName);
+      const cleanLower = clean.toLowerCase();
+      const cleanEnLower = toEnglishName(clean).toLowerCase();
+
+      const existing = state.products.find(p => {
+        const pNorm = normalizeSpaces(p.name).toLowerCase();
+        const pEn = toEnglishName(p.name).toLowerCase();
+        return pNorm === cleanLower || pEn === cleanLower || pEn === cleanEnLower;
+      });
+      if (existing) return existing;
+
+      const created = {
+        id: 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+        name: clean,
+        photo: null,
+        createdAt: Date.now()
+      };
+      state.products.push(created);
+      stats.productsAdded++;
+      return created;
+    }
+
+    function parseCsvText(text) {
+      const clean = String(text || '').replace(/^\uFEFF/, '');
+      const lines = clean.split(/\r?\n/).filter(l => l.trim().length > 0);
+      if (lines.length === 0) return [];
+      let sep = ';';
+      if (!lines[0].includes(';') && lines[0].includes(',')) sep = ',';
+      else if (!lines[0].includes(';') && lines[0].includes('\t')) sep = '\t';
+
+      return lines.map(line => {
+        const cells = [];
+        let cur = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (ch === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+              cur += '"';
+              i++;
+            } else {
+              inQuotes = !inQuotes;
+            }
+          } else if (ch === sep && !inQuotes) {
+            cells.push(cur.trim());
+            cur = '';
+          } else {
+            cur += ch;
+          }
+        }
+        cells.push(cur.trim());
+        return cells;
+      });
+    }
+
+    async function exportExcel() {
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const products = state.products;
+
+      // Sheet 1 (Matris): Room | Ürün 1 | Ürün 2 | ...
+      const sheet1Rows = [
+        ['Room', ...products.map(p => L(p.name))]
+      ];
       state.rooms.forEach(room => {
-        const itemsObj = room.items || {};
-        Object.keys(itemsObj).forEach(pid => {
-          const prod = state.products.find(p => p.id === pid);
-          if (prod) {
-            const serials = getRoomProductSerials(room, pid);
-            const sText = serials.map((sr, i) => `#${i + 1} ${sr.serialNo} [${sr.status}]`).join(' | ');
-            rows.push([room.name, room.note || '', prod.name, String(itemsObj[pid]), sText]);
+        const row = [room.name];
+        products.forEach(p => {
+          const qty = Number(room.items?.[p.id]) || 0;
+          row.push(qty > 0 ? qty : '');
+        });
+        sheet1Rows.push(row);
+      });
+
+      // Sheet 2 (Laptop / PC Seri No Tablosu): Room | Laptop | NO | SERİ NO | DURUM
+      const sheet2Rows = [
+        ['Room', 'Laptop', 'NO', T('SERİ NO', 'SERIAL NO'), T('DURUM', 'STATUS')]
+      ];
+      let anySerialWritten = false;
+      state.rooms.forEach(room => {
+        Object.keys(room.items || {}).forEach(pid => {
+          const prod = products.find(p => p.id === pid);
+          if (!prod) return;
+          const serials = getRoomProductSerials(room, pid);
+          const isLap = isLaptopProduct(prod.name);
+          if (!isLap && serials.length === 0) return;
+
+          const prodLabel = L(prod.name);
+          let written = 0;
+          serials.forEach((sr, idx) => {
+            sheet2Rows.push([room.name, prodLabel, idx + 1, sr.serialNo || '', L(sr.status || '')]);
+            anySerialWritten = true;
+            written++;
+          });
+
+          const qty = Math.min(Number(room.items[pid]) || 0, 50);
+          if (isLap && qty > written) {
+            for (let k = written + 1; k <= qty; k++) {
+              sheet2Rows.push([room.name, prodLabel, k, '', T('Aktif', 'Active')]);
+            }
           }
         });
       });
+      if (!anySerialWritten && sheet2Rows.length === 1) {
+        sheet2Rows.push(['inventory', 'dell laptop', 1, '', T('Aktif', 'Active')]);
+      }
 
-      const csvContent = '\uFEFF' + rows.map(r => r.map(cell => `"${String(cell || '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      await downloadOrShareFile(blob, `Inventory_Report_${new Date().toISOString().slice(0, 10)}.csv`);
+      if (window.XLSX) {
+        const wb = XLSX.utils.book_new();
+        const ws1 = XLSX.utils.aoa_to_sheet(sheet1Rows);
+        ws1['!cols'] = [{ wch: 20 }, ...products.map(() => ({ wch: 18 }))];
+        XLSX.utils.book_append_sheet(wb, ws1, T('Envanter', 'Inventory'));
+
+        const ws2 = XLSX.utils.aoa_to_sheet(sheet2Rows);
+        ws2['!cols'] = [{ wch: 20 }, { wch: 22 }, { wch: 8 }, { wch: 28 }, { wch: 22 }];
+        XLSX.utils.book_append_sheet(wb, ws2, T('Laptop_Seri_Nolar', 'Laptop_Serials'));
+
+        const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        await downloadOrShareFile(blob, `Envanter_${dateStr}.xlsx`);
+        showToast(T('2 sekmeli Excel (.xlsx) indirildi', '2-sheet Excel (.xlsx) exported'), 'success');
+      } else {
+        // Offline / SheetJS yüklenemezse Matris CSV olarak indir
+        const csvContent = '\uFEFF' + sheet1Rows.map(r => r.map(cell => `"${String(cell == null ? '' : cell).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        await downloadOrShareFile(blob, `Envanter_${dateStr}.csv`);
+        showToast(T('Excel (CSV) indirildi', 'Excel (CSV) exported'), 'success');
+      }
+    }
+
+    function importExcelFile(event) {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      if (!file) return;
+
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        try {
+          let sheets = [];
+          if ((ext === 'xlsx' || ext === 'xls') && window.XLSX) {
+            const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+            wb.SheetNames.forEach(name => {
+              const ws = wb.Sheets[name];
+              const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+                .map(r => r.map(cell => String(cell == null ? '' : cell)))
+                .filter(r => r.some(c => c.trim() !== ''));
+              if (rows.length >= 2) sheets.push(rows);
+            });
+          } else if (ext === 'csv') {
+            const text = typeof e.target.result === 'string'
+              ? e.target.result
+              : new TextDecoder('utf-8').decode(new Uint8Array(e.target.result));
+            const rows = parseCsvText(text);
+            if (rows.length >= 2) sheets.push(rows);
+          } else {
+            throw new Error(T('XLSX okumak için internet bağlantısı veya CSV formatı gerekir.', 'Internet connection for XLSX or CSV format is required.'));
+          }
+
+          if (sheets.length === 0) {
+            showToast(T('Dosyada okunabilir veri bulunamadı!', 'No readable data found in file!'), 'error');
+            return;
+          }
+
+          pendingExcelSheets = sheets;
+          document.getElementById('lblExcelImportFileName').textContent = file.name;
+          document.getElementById('excelImportModal').classList.remove('hidden');
+          lucide.createIcons();
+        } catch (err) {
+          showToast(T('Excel dosyası okunamadı: ', 'Failed to read Excel file: ') + (err?.message || ''), 'error');
+        }
+      };
+
+      if (ext === 'csv' && !window.XLSX) {
+        reader.readAsText(file, 'utf-8');
+      } else {
+        reader.readAsArrayBuffer(file);
+      }
+    }
+
+    function cancelExcelImport() {
+      pendingExcelSheets = null;
+      document.getElementById('excelImportModal').classList.add('hidden');
+    }
+
+    async function confirmExcelImport(replaceExistingRooms) {
+      if (!pendingExcelSheets) return;
+      const sheets = pendingExcelSheets;
+      pendingExcelSheets = null;
+      document.getElementById('excelImportModal').classList.add('hidden');
+
+      if (replaceExistingRooms) {
+        state.rooms = [];
+      }
+
+      const stats = { roomsImported: 0, productsAdded: 0, cellsUpdated: 0, serialsImported: 0 };
+
+      sheets.forEach(rows => {
+        if (!rows || rows.length < 2) return;
+        const header = rows[0].map(h => String(h || '').trim());
+        if (header.length < 2) return;
+        const normHeader = header.map(normalizeExcelHeader);
+
+        const serialColIdx = normHeader.findIndex(h =>
+          h === 'SERI NO' || h === 'SERIAL NO' || h === 'SERIAL' ||
+          h === 'SERI NUMARASI' || h === 'SERIAL NUMBER' || h === 'SN'
+        );
+
+        if (serialColIdx >= 0) {
+          let roomColIdx = normHeader.findIndex(h => h === 'ROOM' || h === 'ODA' || h === 'ODA ADI');
+          let prodColIdx = normHeader.findIndex(h =>
+            h === 'LAPTOP' || h === 'LAPTOP MODEL' || h === 'PC' || h === 'BILGISAYAR' ||
+            h === 'PRODUCT' || h === 'URUN' || h === 'URUN ADI' ||
+            h === 'MODEL' || h === 'CIHAZ' || h === 'DEVICE'
+          );
+          let statusColIdx = normHeader.findIndex(h => h === 'DURUM' || h === 'STATUS');
+          if (roomColIdx < 0) roomColIdx = 0;
+          if (prodColIdx < 0) prodColIdx = 1;
+
+          for (let r = 1; r < rows.length; r++) {
+            const row = rows[r];
+            if (!row || serialColIdx >= row.length) continue;
+            const serialNo = String(row[serialColIdx] || '').trim();
+            if (!serialNo) continue; // Boş şablon satırlarını atla
+
+            const roomName = String(row[roomColIdx] || '').trim() || 'inventory';
+            const prodName = String(row[prodColIdx] || '').trim() || 'laptop';
+            const status = (statusColIdx >= 0 ? String(row[statusColIdx] || '').trim() : '') || T('Aktif', 'Active');
+
+            const room = findOrCreateRoomFromExcel(roomName);
+            const prod = findOrCreateProductFromExcel(prodName, stats);
+            if (!room.items) room.items = {};
+            if (!Object.prototype.hasOwnProperty.call(room.items, prod.id)) {
+              room.items[prod.id] = 1;
+            }
+            const list = getRoomProductSerials(room, prod.id);
+            const existingSerial = list.find(x => (x.serialNo || '').toLowerCase() === serialNo.toLowerCase());
+            if (existingSerial) {
+              existingSerial.status = status;
+            } else {
+              list.push({
+                id: 'sr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+                serialNo,
+                status
+              });
+              stats.serialsImported++;
+            }
+            if ((Number(room.items[prod.id]) || 0) < list.length) {
+              room.items[prod.id] = list.length;
+            }
+          }
+        } else {
+          // Matris formatı: Room | kablolu mouse | HyperX headset | logitec | ...
+          const colToProduct = {};
+          for (let c = 1; c < header.length; c++) {
+            const rawProd = header[c];
+            if (!rawProd) continue;
+            colToProduct[c] = findOrCreateProductFromExcel(rawProd, stats);
+          }
+
+          const touchedRooms = new Set();
+          for (let r = 1; r < rows.length; r++) {
+            const row = rows[r];
+            if (!row || row.length === 0) continue;
+            const roomName = String(row[0] || '').trim();
+            if (!roomName) continue; // Boş oda satırlarını atla
+            const normRoom = normalizeExcelHeader(roomName);
+            if (normRoom === 'ROOM' || normRoom === 'ODA' || normRoom.startsWith('GENEL TOPLAM')) continue;
+
+            const room = findOrCreateRoomFromExcel(roomName);
+            if (!room.items) room.items = {};
+            touchedRooms.add(room.id);
+
+            Object.keys(colToProduct).forEach(colKey => {
+              const cIdx = Number(colKey);
+              const prod = colToProduct[cIdx];
+              if (cIdx >= row.length) return;
+              const cellText = String(row[cIdx] || '').trim();
+              if (!cellText) return;
+              const parsed = parseFloat(cellText.replace(',', '.'));
+              if (!isNaN(parsed)) {
+                const qty = Math.max(0, Math.round(parsed));
+                if (qty > 0 || Object.prototype.hasOwnProperty.call(room.items, prod.id)) {
+                  room.items[prod.id] = qty;
+                  stats.cellsUpdated++;
+                }
+              }
+            });
+          }
+          stats.roomsImported += touchedRooms.size;
+        }
+      });
+
+      if (state.rooms.length > 0 && (!state.currentRoomId || !state.rooms.some(r => r.id === state.currentRoomId))) {
+        state.currentRoomId = state.rooms[0].id;
+      }
+      await saveState();
+      renderAll();
+      showToast(
+        T(
+          `Excel yüklendi! ${stats.roomsImported} oda, ${stats.cellsUpdated} hücre, ${stats.serialsImported} seri no`,
+          `Excel imported! ${stats.roomsImported} rooms, ${stats.cellsUpdated} cells, ${stats.serialsImported} serials`
+        ),
+        'success'
+      );
     }
 
     async function exportPCXml() {

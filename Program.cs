@@ -452,6 +452,7 @@ namespace EnvanterSayimApp
         private Button btnTabRooms;
         private Button btnTabCatalog;
         private Button btnTabSummary;
+        private Button btnImportExcel;
         private Button btnExportCsv;
 
         private Panel sidebarPanel;
@@ -563,7 +564,7 @@ namespace EnvanterSayimApp
             topBar.Controls.Add(btnTabCatalog);
             topBar.Controls.Add(btnTabSummary);
 
-            // Right Action: Excel Export
+            // Right Actions: Excel Export & Excel Import
             FlowLayoutPanel rightActions = new FlowLayoutPanel
             {
                 Dock = DockStyle.Right,
@@ -576,15 +577,29 @@ namespace EnvanterSayimApp
             btnExportCsv = new Button
             {
                 Text = "",
-                Size = new Size(140, 38),
+                Size = new Size(125, 38),
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-                Cursor = Cursors.Hand
+                Cursor = Cursors.Hand,
+                Margin = new Padding(6, 0, 0, 0)
             };
             btnExportCsv.FlatAppearance.BorderSize = 0;
-            btnExportCsv.Click += (s, e) => ExportToCsv();
+            btnExportCsv.Click += (s, e) => ExportToExcel();
+
+            btnImportExcel = new Button
+            {
+                Text = "",
+                Size = new Size(125, 38),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(6, 0, 0, 0)
+            };
+            btnImportExcel.FlatAppearance.BorderSize = 1;
+            btnImportExcel.Click += (s, e) => ImportFromExcel();
 
             rightActions.Controls.Add(btnExportCsv);
+            rightActions.Controls.Add(btnImportExcel);
             topBar.Controls.Add(rightActions);
 
             // 2. LEFT SIDEBAR (ROOMS)
@@ -1075,6 +1090,11 @@ namespace EnvanterSayimApp
             btnExportCsv.BackColor = ColSecondary;
             btnExportCsv.ForeColor = ColSecondaryFore;
 
+            btnImportExcel.Text = T("Excel Yükle", "Import Excel");
+            btnImportExcel.BackColor = ColSurfaceAlt;
+            btnImportExcel.ForeColor = ColTextDark;
+            btnImportExcel.FlatAppearance.BorderColor = ColBorder;
+
             sidebarPanel.BackColor = ColCard;
             sidebarTop.BackColor = ColCard;
             lblRoomsHeader.Text = T("ODALAR / BÖLGELER", "ROOMS / LOCATIONS");
@@ -1455,9 +1475,9 @@ namespace EnvanterSayimApp
         // =====================================================================
         private Control CreateRoomProductListCard(RoomData room, ProductItem product, int quantity, int width)
         {
-            bool isLaptop = AppHelper.IsLaptopProduct(product.Name);
             var serials = room.GetSerials(product.Id);
             int serialCount = serials.Count;
+            bool isLaptop = AppHelper.IsLaptopProduct(product.Name) || serialCount > 0;
 
             Panel card = new Panel
             {
@@ -1576,9 +1596,9 @@ namespace EnvanterSayimApp
         // =====================================================================
         private Control CreateRoomProductGridCard(RoomData room, ProductItem product, int quantity)
         {
-            bool isLaptop = AppHelper.IsLaptopProduct(product.Name);
             var serials = room.GetSerials(product.Id);
             int serialCount = serials.Count;
+            bool isLaptop = AppHelper.IsLaptopProduct(product.Name) || serialCount > 0;
 
             Panel card = new Panel
             {
@@ -2416,35 +2436,103 @@ namespace EnvanterSayimApp
             }
         }
 
-        private void ExportToCsv()
+        private void ExportToExcel()
         {
             using (SaveFileDialog sfd = new SaveFileDialog())
             {
-                sfd.Title = T("Excel (CSV) Raporunu Kaydet", "Save Excel (CSV) Report");
-                sfd.Filter = "CSV (*.csv)|*.csv";
-                sfd.FileName = $"Inventory_Report_{DateTime.Now:yyyy-MM-dd}.csv";
+                sfd.Title = T("Excel Dosyasını Kaydet (.xlsx)", "Save Excel Workbook (.xlsx)");
+                sfd.Filter = "Excel Workbook (*.xlsx)|*.xlsx|CSV (*.csv)|*.csv";
+                sfd.FileName = $"Envanter_{DateTime.Now:yyyy-MM-dd}.xlsx";
 
                 if (sfd.ShowDialog(this) == DialogResult.OK)
                 {
-                    StringBuilder sb = new StringBuilder();
-                    sb.AppendLine(T("Oda Adi;Aciklama;Urun Adi;Adet;Seri No Tablosu (NO - SERI NO - DURUM)", "Room;Note;Product;Quantity;Serial Table (NO - SERIAL NO - STATUS)"));
-
-                    foreach (var room in store.Rooms)
+                    try
                     {
-                        foreach (var item in room.Items)
+                        string ext = Path.GetExtension(sfd.FileName)?.ToLowerInvariant() ?? ".xlsx";
+                        if (ext == ".csv")
                         {
-                            var prod = store.Products.FirstOrDefault(p => p.Id == item.ProductId);
-                            if (prod != null)
-                            {
-                                var serials = item.Serials ?? new List<SerialRecord>();
-                                string serialsText = string.Join(" | ", serials.Select((sr, idx) => $"#{idx + 1} {sr.SerialNo} [{L(sr.Status)}]"));
-                                sb.AppendLine($"\"{EscapeCsv(room.Name)}\";\"{EscapeCsv(L(room.Note))}\";\"{EscapeCsv(L(prod.Name))}\";{item.Quantity};\"{EscapeCsv(serialsText)}\"");
-                            }
-                        }
-                    }
+                            // Matris formatında CSV dışa aktarma (Room;Ürün1;Ürün2;...)
+                            StringBuilder sb = new StringBuilder();
+                            var headerCells = new List<string> { "Room" };
+                            headerCells.AddRange(store.Products.Select(p => $"\"{EscapeCsv(L(p.Name))}\""));
+                            sb.AppendLine(string.Join(";", headerCells));
 
-                    File.WriteAllText(sfd.FileName, sb.ToString(), new UTF8Encoding(true));
-                    MessageBox.Show(T("Excel (CSV) raporu kaydedildi!", "Excel (CSV) report saved!"), T("Tamam", "Done"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            foreach (var room in store.Rooms)
+                            {
+                                var rowCells = new List<string> { $"\"{EscapeCsv(room.Name)}\"" };
+                                foreach (var p in store.Products)
+                                {
+                                    int q = room.GetQuantity(p.Id);
+                                    rowCells.Add(q > 0 ? q.ToString() : "");
+                                }
+                                sb.AppendLine(string.Join(";", rowCells));
+                            }
+                            File.WriteAllText(sfd.FileName, sb.ToString(), new UTF8Encoding(true));
+                        }
+                        else
+                        {
+                            ExcelHelper.ExportToXlsx(store, sfd.FileName);
+                        }
+
+                        MessageBox.Show(
+                            T("Excel dosyası başarıyla kaydedildi!\n\n• 1. Sekme (Envanter): Oda x Ürün matris tablosu\n• 2. Sekme (Laptop_Seri_Nolar): PC/Laptop seri no & durum giriş tablosu\n\nBu dosyayı Excel'de düzenleyip 'Excel Yükle' ile geri içeri aktarabilirsiniz.",
+                              "Excel workbook saved successfully!\n\n• Sheet 1 (Inventory): Room x Product matrix table\n• Sheet 2 (Laptop_Serials): PC/Laptop serial no & status table\n\nYou can edit it in Excel and import it right back using 'Import Excel'."),
+                            T("Excel Kaydedildi", "Excel Saved"),
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message, T("Hata", "Error"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+
+        private void ImportFromExcel()
+        {
+            using (OpenFileDialog ofd = new OpenFileDialog())
+            {
+                ofd.Title = T("Excel Dosyasından Veri Yükle (.xlsx / .csv)", "Import Data from Excel (.xlsx / .csv)");
+                ofd.Filter = "Excel & CSV (*.xlsx;*.csv)|*.xlsx;*.csv|Excel Workbook (*.xlsx)|*.xlsx|CSV (*.csv)|*.csv";
+
+                if (ofd.ShowDialog(this) == DialogResult.OK)
+                {
+                    var modeChoice = MessageBox.Show(
+                        T("Excel verileri nasıl yüklensin?\n\n• EVET = Mevcut odaların üzerine ekle / güncelle (Birleştir)\n• HAYIR = Mevcut odaları temizle, sadece bu Excel'deki odaları yükle (Ürün fotoğrafları korunur)\n• İPTAL = Vazgeç",
+                          "How would you like to import Excel data?\n\n• YES = Merge / Update existing rooms\n• NO = Clear existing rooms and load only from this Excel (Product photos are preserved)\n• CANCEL = Abort"),
+                        T("Excel İçe Aktarma", "Import from Excel"),
+                        MessageBoxButtons.YesNoCancel,
+                        MessageBoxIcon.Question);
+
+                    if (modeChoice == DialogResult.Cancel) return;
+                    bool replaceRooms = (modeChoice == DialogResult.No);
+
+                    try
+                    {
+                        var res = ExcelHelper.ImportFromExcelOrCsv(store, ofd.FileName, replaceRooms);
+                        if (store.Rooms.Count > 0 && (currentRoomId == null || !store.Rooms.Any(r => r.Id == currentRoomId)))
+                        {
+                            currentRoomId = store.Rooms[0].Id;
+                        }
+                        AppHelper.SaveStore(store);
+                        RefreshAll();
+
+                        MessageBox.Show(
+                            T($"Excel verileri başarıyla yüklendi!\n\n• İşlenen Oda Sayısı: {res.RoomsImported}\n• Yeni Eklenen Ürün Çeşidi: {res.ProductsAdded}\n• Güncellenen Ürün Hücresi: {res.CellEntriesUpdated}\n• Yüklenen Laptop Seri No: {res.SerialsImported}",
+                              $"Excel data imported successfully!\n\n• Rooms Processed: {res.RoomsImported}\n• New Product Types Added: {res.ProductsAdded}\n• Product Cells Updated: {res.CellEntriesUpdated}\n• Laptop Serial Numbers Imported: {res.SerialsImported}"),
+                            T("İçe Aktarma Tamamlandı", "Import Completed"),
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(
+                            T("Excel dosyası okunurken hata oluştu:\n", "Error reading Excel file:\n") + ex.Message,
+                            T("Hata", "Error"),
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+                    }
                 }
             }
         }
