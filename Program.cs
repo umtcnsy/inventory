@@ -452,6 +452,7 @@ namespace EnvanterSayimApp
         private Button btnTabRooms;
         private Button btnTabCatalog;
         private Button btnTabSummary;
+        private Button btnLaptopExcel;
         private Button btnImportExcel;
         private Button btnExportCsv;
 
@@ -480,7 +481,7 @@ namespace EnvanterSayimApp
         public MainForm()
         {
             this.Size = new Size(1280, 800);
-            this.MinimumSize = new Size(980, 620);
+            this.MinimumSize = new Size(1060, 620);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
             this.DoubleBuffered = true;
@@ -551,20 +552,20 @@ namespace EnvanterSayimApp
             topBar.Controls.Add(lblLogo);
 
             // Center Tabs
-            btnTabRooms = CreateTabButton("", 320, 160);
+            btnTabRooms = CreateTabButton("", 270, 134);
             btnTabRooms.Click += (s, e) => SwitchTab("rooms");
 
-            btnTabCatalog = CreateTabButton("", 488, 160);
+            btnTabCatalog = CreateTabButton("", 410, 134);
             btnTabCatalog.Click += (s, e) => SwitchTab("catalog");
 
-            btnTabSummary = CreateTabButton("", 656, 160);
+            btnTabSummary = CreateTabButton("", 550, 134);
             btnTabSummary.Click += (s, e) => SwitchTab("summary");
 
             topBar.Controls.Add(btnTabRooms);
             topBar.Controls.Add(btnTabCatalog);
             topBar.Controls.Add(btnTabSummary);
 
-            // Right Actions: Excel Export & Excel Import
+            // Right Actions: Laptop Excel + General Excel Import & Export
             FlowLayoutPanel rightActions = new FlowLayoutPanel
             {
                 Dock = DockStyle.Right,
@@ -577,9 +578,9 @@ namespace EnvanterSayimApp
             btnExportCsv = new Button
             {
                 Text = "",
-                Size = new Size(125, 38),
+                Size = new Size(110, 38),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8.8f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(6, 0, 0, 0)
             };
@@ -589,17 +590,30 @@ namespace EnvanterSayimApp
             btnImportExcel = new Button
             {
                 Text = "",
-                Size = new Size(125, 38),
+                Size = new Size(110, 38),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8.8f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(6, 0, 0, 0)
             };
             btnImportExcel.FlatAppearance.BorderSize = 1;
             btnImportExcel.Click += (s, e) => ImportFromExcel();
 
+            btnLaptopExcel = new Button
+            {
+                Text = "",
+                Size = new Size(124, 38),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.8f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(6, 0, 0, 0)
+            };
+            btnLaptopExcel.FlatAppearance.BorderSize = 0;
+            btnLaptopExcel.Click += (s, e) => OpenLaptopExcelDialog();
+
             rightActions.Controls.Add(btnExportCsv);
             rightActions.Controls.Add(btnImportExcel);
+            rightActions.Controls.Add(btnLaptopExcel);
             topBar.Controls.Add(rightActions);
 
             // 2. LEFT SIDEBAR (ROOMS)
@@ -1085,6 +1099,10 @@ namespace EnvanterSayimApp
             btnTabRooms.Text = T("Odalar ve Sayım", "Rooms & Count");
             btnTabCatalog.Text = T("Ürün Havuzu", "Product Pool");
             btnTabSummary.Text = T("Genel Özet", "Global Summary");
+
+            btnLaptopExcel.Text = T("Laptop Excel", "Laptop Excel");
+            btnLaptopExcel.BackColor = ColPrimary;
+            btnLaptopExcel.ForeColor = ColPrimaryFore;
 
             btnExportCsv.Text = T("Excel İndir", "Export Excel");
             btnExportCsv.BackColor = ColSecondary;
@@ -2537,6 +2555,187 @@ namespace EnvanterSayimApp
             }
         }
 
+        private void OpenLaptopExcelDialog()
+        {
+            using (Form dlg = new Form())
+            {
+                dlg.Text = T("Laptop Excel Listesi", "Laptop Excel List");
+                dlg.Size = new Size(460, 268);
+                dlg.StartPosition = FormStartPosition.CenterParent;
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dlg.MaximizeBox = false;
+                dlg.MinimizeBox = false;
+                dlg.BackColor = ColCard;
+                dlg.ForeColor = ColTextDark;
+                dlg.Font = new Font("Segoe UI", 9.5f);
+                dlg.HandleCreated += (s, e) => AppHelper.ApplyWindowTitleBarTheme(dlg, store.DarkMode);
+
+                Label lblTitle = new Label
+                {
+                    Text = T("Laptoplar İçin Ayrı Excel İçe / Dışa Aktar", "Separate Excel Import / Export for Laptops"),
+                    Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+                    ForeColor = ColTextDark,
+                    Location = new Point(20, 18),
+                    Size = new Size(410, 26)
+                };
+
+                Label lblDesc = new Label
+                {
+                    Text = T("Sadece laptopların oda, model, seri no ve durum listesini ayrı bir Excel (.xlsx / .csv) olarak dışa aktarabilir veya geri yükleyebilirsiniz.",
+                             "Export or import only your laptops (room, model, serial no & status) as a dedicated Excel (.xlsx / .csv) list without affecting other items."),
+                    Font = new Font("Segoe UI", 8.8f),
+                    ForeColor = ColTextMuted,
+                    Location = new Point(20, 48),
+                    Size = new Size(406, 44)
+                };
+
+                Label lblFormat = new Label
+                {
+                    Text = T("Format:  Room  |  Laptop  |  NO  |  SERİ NO  |  DURUM", "Format:  Room  |  Laptop  |  NO  |  SERIAL NO  |  STATUS"),
+                    Font = new Font("Consolas", 8.8f, FontStyle.Bold),
+                    ForeColor = ColSecondary,
+                    BackColor = ColBg,
+                    Location = new Point(20, 98),
+                    Size = new Size(404, 30),
+                    TextAlign = ContentAlignment.MiddleCenter
+                };
+
+                Button btnLapExport = new Button
+                {
+                    Text = T("Laptop Excel İndir (.xlsx)", "Export Laptop Excel (.xlsx)"),
+                    Location = new Point(20, 146),
+                    Size = new Size(196, 42),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = ColPrimary,
+                    ForeColor = ColPrimaryFore,
+                    Font = new Font("Segoe UI", 9.2f, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                btnLapExport.FlatAppearance.BorderSize = 0;
+                btnLapExport.Click += (s, e) =>
+                {
+                    dlg.Close();
+                    ExportLaptopsToExcel();
+                };
+
+                Button btnLapImport = new Button
+                {
+                    Text = T("Laptop Excel Yükle", "Import Laptop Excel"),
+                    Location = new Point(228, 146),
+                    Size = new Size(196, 42),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = ColSecondary,
+                    ForeColor = ColSecondaryFore,
+                    Font = new Font("Segoe UI", 9.2f, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                btnLapImport.FlatAppearance.BorderSize = 0;
+                btnLapImport.Click += (s, e) =>
+                {
+                    dlg.Close();
+                    ImportLaptopsFromExcel();
+                };
+
+                Button btnClose = new Button
+                {
+                    Text = T("Kapat", "Close"),
+                    Location = new Point(324, 198),
+                    Size = new Size(100, 28),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = ColSurfaceAlt,
+                    ForeColor = ColTextDark,
+                    Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                btnClose.FlatAppearance.BorderSize = 0;
+                btnClose.Click += (s, e) => dlg.Close();
+
+                dlg.Controls.AddRange(new Control[] { lblTitle, lblDesc, lblFormat, btnLapExport, btnLapImport, btnClose });
+                dlg.ShowDialog(this);
+            }
+        }
+
+        private void ExportLaptopsToExcel()
+        {
+            using (SaveFileDialog sfd = new SaveFileDialog())
+            {
+                sfd.Title = T("Laptop Excel Listesini Kaydet (.xlsx)", "Save Laptop Excel List (.xlsx)");
+                sfd.Filter = "Excel Workbook (*.xlsx)|*.xlsx|CSV (*.csv)|*.csv";
+                sfd.FileName = $"Laptop_Listesi_{DateTime.Now:yyyy-MM-dd}.xlsx";
+
+                if (sfd.ShowDialog(this) == DialogResult.OK)
+                {
+                    try
+                    {
+                        string ext = Path.GetExtension(sfd.FileName)?.ToLowerInvariant() ?? ".xlsx";
+                        if (ext == ".csv")
+                            ExcelHelper.ExportLaptopsToCsv(store, sfd.FileName);
+                        else
+                            ExcelHelper.ExportLaptopsToXlsx(store, sfd.FileName);
+
+                        MessageBox.Show(
+                            T("Laptop listesi başarıyla Excel olarak kaydedildi!\n\nSütunlar: Room | Laptop | NO | SERİ NO | DURUM\n\nExcel'de seri numaralarını doldurup 'Laptop Excel → Yükle' ile geri içeri aktarabilirsiniz.",
+                              "Laptop Excel list saved successfully!\n\nColumns: Room | Laptop | NO | SERIAL NO | STATUS\n\nFill in serial numbers in Excel and import it back via 'Laptop Excel → Import'."),
+                            T("Laptop Excel Kaydedildi", "Laptop Excel Saved"),
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message, T("Hata", "Error"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+
+        private void ImportLaptopsFromExcel()
+        {
+            using (OpenFileDialog ofd = new OpenFileDialog())
+            {
+                ofd.Title = T("Laptop Excel Listesi Yükle (.xlsx / .csv)", "Import Laptop Excel List (.xlsx / .csv)");
+                ofd.Filter = "Excel & CSV (*.xlsx;*.csv)|*.xlsx;*.csv|Excel Workbook (*.xlsx)|*.xlsx|CSV (*.csv)|*.csv";
+
+                if (ofd.ShowDialog(this) == DialogResult.OK)
+                {
+                    var modeChoice = MessageBox.Show(
+                        T("Laptop seri no listesi nasıl yüklensin?\n\n• EVET = Mevcut laptop seri numaralarının üzerine ekle / güncelle (Birleştir)\n• HAYIR = Mevcut laptop seri numaralarını temizle, sadece bu Excel'dekileri yükle (Diğer ürünlere dokunulmaz)\n• İPTAL = Vazgeç",
+                          "How would you like to import the Laptop Excel list?\n\n• YES = Merge / Update existing laptop serial numbers\n• NO = Clear existing laptop serial numbers and load only from this Excel (Other items are untouched)\n• CANCEL = Abort"),
+                        T("Laptop Excel Yükle", "Import Laptop Excel"),
+                        MessageBoxButtons.YesNoCancel,
+                        MessageBoxIcon.Question);
+
+                    if (modeChoice == DialogResult.Cancel) return;
+                    bool replaceSerials = (modeChoice == DialogResult.No);
+
+                    try
+                    {
+                        var res = ExcelHelper.ImportLaptopsFromExcelOrCsv(store, ofd.FileName, replaceSerials);
+                        if (store.Rooms.Count > 0 && (currentRoomId == null || !store.Rooms.Any(r => r.Id == currentRoomId)))
+                        {
+                            currentRoomId = store.Rooms[0].Id;
+                        }
+                        AppHelper.SaveStore(store);
+                        RefreshAll();
+
+                        MessageBox.Show(
+                            T($"Laptop Excel listesi başarıyla yüklendi!\n\n• İşlenen Oda Sayısı: {res.RoomsImported}\n• Yeni Eklenen Laptop Seri No: {res.SerialsImported}\n• Güncellenen Seri No: {res.SerialsUpdated}\n• Yeni Laptop Modeli: {res.ProductsAdded}",
+                              $"Laptop Excel list imported successfully!\n\n• Rooms Processed: {res.RoomsImported}\n• New Serial Numbers Added: {res.SerialsImported}\n• Existing Serials Updated: {res.SerialsUpdated}\n• New Laptop Models Added: {res.ProductsAdded}"),
+                            T("Laptop Excel Yüklendi", "Laptop Excel Imported"),
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(
+                            T("Laptop Excel dosyası okunurken hata oluştu:\n", "Error reading Laptop Excel file:\n") + ex.Message,
+                            T("Hata", "Error"),
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+
         private string EscapeCsv(string val) => (val ?? "").Replace("\"", "\"\"");
 
         private void ResetAllData()
@@ -2566,7 +2765,7 @@ namespace EnvanterSayimApp
         private readonly InventoryStore store;
         private readonly RoomData room;
         private readonly ProductItem product;
-        private readonly List<SerialRecord> serials;
+        private List<SerialRecord> serials;
 
         private string editingSerialId = null;
         private TextBox txtSerialNo;
@@ -2641,23 +2840,54 @@ namespace EnvanterSayimApp
 
             Label lblTitle = new Label
             {
-                Text = $"{L(product.Name).ToUpperInvariant()} — " + T("SERİ NO & DURUM TABLOSU", "SERIAL NO & STATUS TABLE"),
-                Font = new Font("Segoe UI", 11.5f, FontStyle.Bold),
+                Text = $"{L(product.Name).ToUpperInvariant()} — " + T("SERİ NO & DURUM", "SERIAL NO & STATUS"),
+                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
                 ForeColor = ColTextDark,
                 Location = new Point(74, 10),
-                AutoSize = true
+                Size = new Size(376, 24),
+                AutoEllipsis = true
             };
 
             lblSubInfo = new Label
             {
                 Text = "",
-                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8.8f, FontStyle.Bold),
                 ForeColor = ColSecondary,
                 Location = new Point(74, 36),
-                AutoSize = true
+                Size = new Size(376, 20),
+                AutoEllipsis = true
             };
 
-            topInfo.Controls.AddRange(new Control[] { pic, lblTitle, lblSubInfo });
+            Button btnImportSingleLaptop = new Button
+            {
+                Text = T("Excel Yükle", "Import Excel"),
+                Location = new Point(458, 17),
+                Size = new Size(98, 32),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = ColSurfaceAlt,
+                ForeColor = ColTextDark,
+                Font = new Font("Segoe UI", 8.2f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnImportSingleLaptop.FlatAppearance.BorderColor = ColBorder;
+            btnImportSingleLaptop.FlatAppearance.BorderSize = 1;
+            btnImportSingleLaptop.Click += (s, e) => ImportSingleLaptopExcel();
+
+            Button btnExportSingleLaptop = new Button
+            {
+                Text = T("Excel İndir", "Export Excel"),
+                Location = new Point(562, 17),
+                Size = new Size(98, 32),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = ColSecondary,
+                ForeColor = ColSecondaryFore,
+                Font = new Font("Segoe UI", 8.2f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnExportSingleLaptop.FlatAppearance.BorderSize = 0;
+            btnExportSingleLaptop.Click += (s, e) => ExportSingleLaptopExcel();
+
+            topInfo.Controls.AddRange(new Control[] { pic, lblTitle, lblSubInfo, btnImportSingleLaptop, btnExportSingleLaptop });
 
             Label lblSerialInput = new Label
             {
@@ -2894,6 +3124,77 @@ namespace EnvanterSayimApp
                 CancelEditMode();
             AppHelper.SaveStore(store);
             RenderTableRows();
+        }
+
+        private void ExportSingleLaptopExcel()
+        {
+            using (SaveFileDialog sfd = new SaveFileDialog())
+            {
+                string safeName = string.Concat(product.Name.Where(ch => char.IsLetterOrDigit(ch) || ch == '_' || ch == '-' || ch == ' ')).Trim().Replace(' ', '_');
+                if (string.IsNullOrEmpty(safeName)) safeName = "Laptop";
+                sfd.Title = T("Bu Laptopun Excel Listesini Kaydet", "Save This Laptop's Excel List");
+                sfd.Filter = "Excel Workbook (*.xlsx)|*.xlsx|CSV (*.csv)|*.csv";
+                sfd.FileName = $"{safeName}_SeriNolar_{DateTime.Now:yyyy-MM-dd}.xlsx";
+
+                if (sfd.ShowDialog(this) == DialogResult.OK)
+                {
+                    try
+                    {
+                        string ext = Path.GetExtension(sfd.FileName)?.ToLowerInvariant() ?? ".xlsx";
+                        if (ext == ".csv")
+                            ExcelHelper.ExportLaptopsToCsv(store, sfd.FileName, room, product);
+                        else
+                            ExcelHelper.ExportLaptopsToXlsx(store, sfd.FileName, room, product);
+
+                        MessageBox.Show(
+                            T($"\"{L(product.Name)}\" seri no listesi Excel olarak kaydedildi.", $"\"{L(product.Name)}\" serial list exported to Excel."),
+                            T("Tamam", "Done"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message, T("Hata", "Error"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+
+        private void ImportSingleLaptopExcel()
+        {
+            using (OpenFileDialog ofd = new OpenFileDialog())
+            {
+                ofd.Title = T("Bu Laptop İçin Excel'den Seri No Yükle", "Import Serial Numbers for This Laptop");
+                ofd.Filter = "Excel & CSV (*.xlsx;*.csv)|*.xlsx;*.csv|Excel Workbook (*.xlsx)|*.xlsx|CSV (*.csv)|*.csv";
+
+                if (ofd.ShowDialog(this) == DialogResult.OK)
+                {
+                    var choice = MessageBox.Show(
+                        T("Seri numaraları nasıl yüklensin?\n\n• EVET = Mevcut listeye ekle / güncelle\n• HAYIR = Bu laptopun mevcut listesini temizle, sadece Excel'dekileri yükle\n• İPTAL = Vazgeç",
+                          "How should serial numbers be imported?\n\n• YES = Merge / update existing list\n• NO = Clear this laptop's current list and load only from Excel\n• CANCEL = Abort"),
+                        T("Laptop Excel Yükle", "Import Laptop Excel"),
+                        MessageBoxButtons.YesNoCancel,
+                        MessageBoxIcon.Question);
+
+                    if (choice == DialogResult.Cancel) return;
+                    bool replace = (choice == DialogResult.No);
+
+                    try
+                    {
+                        var res = ExcelHelper.ImportLaptopsFromExcelOrCsv(store, ofd.FileName, replace, room, product);
+                        this.serials = room.GetSerials(product.Id);
+                        AppHelper.SaveStore(store);
+                        RenderTableRows();
+
+                        MessageBox.Show(
+                            T($"Yükleme tamamlandı!\n\n• Yeni Eklenen Seri No: {res.SerialsImported}\n• Güncellenen: {res.SerialsUpdated}",
+                              $"Import completed!\n\n• New Serials Added: {res.SerialsImported}\n• Updated: {res.SerialsUpdated}"),
+                            T("Tamam", "Done"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message, T("Hata", "Error"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
         }
 
         private void UpdateCounters()

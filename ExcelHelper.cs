@@ -15,6 +15,7 @@ namespace EnvanterSayimApp
         public int ProductsAdded { get; set; }
         public int CellEntriesUpdated { get; set; }
         public int SerialsImported { get; set; }
+        public int SerialsUpdated { get; set; }
     }
 
     public static class ExcelHelper
@@ -52,72 +53,7 @@ namespace EnvanterSayimApp
             }
 
             // Sheet 2 (Laptop/PC Seri Numaraları): Room | Laptop | NO | SERİ NO | DURUM
-            var sheet2Rows = new List<List<object>>();
-            sheet2Rows.Add(new List<object>
-            {
-                "Room",
-                "Laptop",
-                "NO",
-                isEn ? "SERIAL NO" : "SERİ NO",
-                isEn ? "STATUS" : "DURUM"
-            });
-
-            bool anySerialWritten = false;
-            foreach (var room in store.Rooms)
-            {
-                foreach (var item in room.Items)
-                {
-                    var prod = products.FirstOrDefault(p => p.Id == item.ProductId);
-                    if (prod == null) continue;
-
-                    var serials = item.Serials ?? new List<SerialRecord>();
-                    bool isLaptop = AppHelper.IsLaptopProduct(prod.Name);
-                    if (!isLaptop && serials.Count == 0) continue;
-
-                    string prodLabel = AppHelper.LocalizeText(prod.Name, isEn);
-                    int writtenForThis = 0;
-
-                    if (serials.Count > 0)
-                    {
-                        for (int i = 0; i < serials.Count; i++)
-                        {
-                            sheet2Rows.Add(new List<object>
-                            {
-                                room.Name,
-                                prodLabel,
-                                i + 1,
-                                serials[i].SerialNo ?? "",
-                                AppHelper.LocalizeText(serials[i].Status ?? "", isEn)
-                            });
-                            anySerialWritten = true;
-                            writtenForThis++;
-                        }
-                    }
-
-                    // Adet > kayıtlı seri no ise kullanıcının Excel'de rahat doldurması için kalan boş şablon satırlarını ekle
-                    int targetRows = Math.Min(item.Quantity, 50);
-                    if (isLaptop && targetRows > writtenForThis)
-                    {
-                        for (int k = writtenForThis + 1; k <= targetRows; k++)
-                        {
-                            sheet2Rows.Add(new List<object>
-                            {
-                                room.Name,
-                                prodLabel,
-                                k,
-                                "",
-                                isEn ? "Active" : "Aktif"
-                            });
-                        }
-                    }
-                }
-            }
-
-            // Hiç oda/laptop yoksa örnek başlık altı boş şablon satırı bırak
-            if (!anySerialWritten && sheet2Rows.Count == 1)
-            {
-                sheet2Rows.Add(new List<object> { "inventory", "dell laptop", 1, "", isEn ? "Active" : "Aktif" });
-            }
+            var sheet2Rows = BuildLaptopSheetRows(store, null, null);
 
             // .xlsx (OpenXML ZIP) dosyasını oluştur
             if (File.Exists(filePath)) File.Delete(filePath);
@@ -133,6 +69,125 @@ namespace EnvanterSayimApp
                 WriteZipText(zip, "xl/worksheets/sheet1.xml", BuildWorksheetXml(sheet1Rows, new[] { 20.0 }, 18.0));
                 WriteZipText(zip, "xl/worksheets/sheet2.xml", BuildWorksheetXml(sheet2Rows, new[] { 20.0, 22.0, 8.0, 28.0, 22.0 }, 20.0));
             }
+        }
+
+        // =====================================================================
+        // 1B. SADECE LAPTOPLAR İÇİN AYRI .XLSX VE .CSV EXPORT
+        // =====================================================================
+        public static void ExportLaptopsToXlsx(InventoryStore store, string filePath, RoomData filterRoom = null, ProductItem filterProduct = null)
+        {
+            bool isEn = store.Language == "en";
+            string sheetName = isEn ? "Laptop_List" : "Laptop_Listesi";
+            var rows = BuildLaptopSheetRows(store, filterRoom, filterProduct);
+
+            if (File.Exists(filePath)) File.Delete(filePath);
+
+            using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+            using (var zip = new ZipArchive(fs, ZipArchiveMode.Create))
+            {
+                WriteZipText(zip, "[Content_Types].xml", BuildSingleSheetContentTypesXml());
+                WriteZipText(zip, "_rels/.rels", BuildRootRelsXml());
+                WriteZipText(zip, "xl/workbook.xml", BuildSingleSheetWorkbookXml(sheetName));
+                WriteZipText(zip, "xl/_rels/workbook.xml.rels", BuildSingleSheetWorkbookRelsXml());
+                WriteZipText(zip, "xl/styles.xml", BuildStylesXml());
+                WriteZipText(zip, "xl/worksheets/sheet1.xml", BuildWorksheetXml(rows, new[] { 20.0, 22.0, 8.0, 28.0, 22.0 }, 20.0));
+            }
+        }
+
+        public static void ExportLaptopsToCsv(InventoryStore store, string filePath, RoomData filterRoom = null, ProductItem filterProduct = null)
+        {
+            var rows = BuildLaptopSheetRows(store, filterRoom, filterProduct);
+            var sb = new StringBuilder();
+            foreach (var row in rows)
+            {
+                var cells = row.Select(v =>
+                {
+                    string s = v == null ? "" : Convert.ToString(v, CultureInfo.InvariantCulture);
+                    return $"\"{s.Replace("\"", "\"\"")}\"";
+                });
+                sb.AppendLine(string.Join(";", cells));
+            }
+            File.WriteAllText(filePath, sb.ToString(), new UTF8Encoding(true));
+        }
+
+        private static List<List<object>> BuildLaptopSheetRows(InventoryStore store, RoomData filterRoom, ProductItem filterProduct)
+        {
+            bool isEn = store.Language == "en";
+            var products = store.Products.ToList();
+            var rows = new List<List<object>>();
+            rows.Add(new List<object>
+            {
+                "Room",
+                "Laptop",
+                "NO",
+                isEn ? "SERIAL NO" : "SERİ NO",
+                isEn ? "STATUS" : "DURUM"
+            });
+
+            var targetRooms = filterRoom != null ? new List<RoomData> { filterRoom } : store.Rooms;
+            bool anySerialWritten = false;
+
+            foreach (var room in targetRooms)
+            {
+                foreach (var item in room.Items)
+                {
+                    if (filterProduct != null && item.ProductId != filterProduct.Id) continue;
+
+                    var prod = products.FirstOrDefault(p => p.Id == item.ProductId);
+                    if (prod == null) continue;
+
+                    var serials = item.Serials ?? new List<SerialRecord>();
+                    bool isLaptop = AppHelper.IsLaptopProduct(prod.Name);
+                    if (filterProduct == null && !isLaptop && serials.Count == 0) continue;
+
+                    string prodLabel = AppHelper.LocalizeText(prod.Name, isEn);
+                    int writtenForThis = 0;
+
+                    if (serials.Count > 0)
+                    {
+                        for (int i = 0; i < serials.Count; i++)
+                        {
+                            rows.Add(new List<object>
+                            {
+                                room.Name,
+                                prodLabel,
+                                i + 1,
+                                serials[i].SerialNo ?? "",
+                                AppHelper.LocalizeText(serials[i].Status ?? "", isEn)
+                            });
+                            anySerialWritten = true;
+                            writtenForThis++;
+                        }
+                    }
+
+                    // Adet > kayıtlı seri no ise kullanıcının Excel'de rahat doldurması için kalan boş şablon satırlarını ekle
+                    int targetRows = Math.Min(item.Quantity, 50);
+                    if ((isLaptop || filterProduct != null) && targetRows > writtenForThis)
+                    {
+                        for (int k = writtenForThis + 1; k <= targetRows; k++)
+                        {
+                            rows.Add(new List<object>
+                            {
+                                room.Name,
+                                prodLabel,
+                                k,
+                                "",
+                                isEn ? "Active" : "Aktif"
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Hiç satır yoksa kullanıcıya hazır örnek başlık altı boş şablon satırı bırak
+            if (!anySerialWritten && rows.Count == 1)
+            {
+                string defaultRoom = filterRoom != null ? filterRoom.Name : (store.Rooms.FirstOrDefault()?.Name ?? "inventory");
+                string defaultProd = filterProduct != null ? AppHelper.LocalizeText(filterProduct.Name, isEn) : "dell laptop";
+                rows.Add(new List<object> { defaultRoom, defaultProd, 1, "", isEn ? "Active" : "Aktif" });
+            }
+
+            return rows;
         }
 
         private static void WriteZipText(ZipArchive zip, string entryName, string content)
@@ -183,6 +238,37 @@ namespace EnvanterSayimApp
   <Relationship Id=""rId1"" Type=""http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"" Target=""worksheets/sheet1.xml""/>
   <Relationship Id=""rId2"" Type=""http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"" Target=""worksheets/sheet2.xml""/>
   <Relationship Id=""rId3"" Type=""http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"" Target=""styles.xml""/>
+</Relationships>";
+        }
+
+        private static string BuildSingleSheetContentTypesXml()
+        {
+            return @"<?xml version=""1.0"" encoding=""UTF-8"" standalone=""yes""?>
+<Types xmlns=""http://schemas.openxmlformats.org/package/2006/content-types"">
+  <Default Extension=""rels"" ContentType=""application/vnd.openxmlformats-package.relationships+xml""/>
+  <Default Extension=""xml"" ContentType=""application/xml""/>
+  <Override PartName=""/xl/workbook.xml"" ContentType=""application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml""/>
+  <Override PartName=""/xl/styles.xml"" ContentType=""application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml""/>
+  <Override PartName=""/xl/worksheets/sheet1.xml"" ContentType=""application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml""/>
+</Types>";
+        }
+
+        private static string BuildSingleSheetWorkbookXml(string sheetName)
+        {
+            return $@"<?xml version=""1.0"" encoding=""UTF-8"" standalone=""yes""?>
+<workbook xmlns=""http://schemas.openxmlformats.org/spreadsheetml/2006/main"" xmlns:r=""http://schemas.openxmlformats.org/officeDocument/2006/relationships"">
+  <sheets>
+    <sheet name=""{XmlEscape(sheetName)}"" sheetId=""1"" r:id=""rId1""/>
+  </sheets>
+</workbook>";
+        }
+
+        private static string BuildSingleSheetWorkbookRelsXml()
+        {
+            return @"<?xml version=""1.0"" encoding=""UTF-8"" standalone=""yes""?>
+<Relationships xmlns=""http://schemas.openxmlformats.org/package/2006/relationships"">
+  <Relationship Id=""rId1"" Type=""http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"" Target=""worksheets/sheet1.xml""/>
+  <Relationship Id=""rId2"" Type=""http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"" Target=""styles.xml""/>
 </Relationships>";
         }
 
@@ -337,6 +423,8 @@ namespace EnvanterSayimApp
                 store.Rooms.Clear();
             }
 
+            var allTouchedRooms = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
             foreach (var sheetRows in allSheets)
             {
                 if (sheetRows == null || sheetRows.Count < 2) continue;
@@ -352,19 +440,20 @@ namespace EnvanterSayimApp
 
                 if (serialColIdx >= 0)
                 {
-                    ImportSerialSheet(store, sheetRows, normHeader, serialColIdx, result);
+                    ImportSerialSheet(store, sheetRows, normHeader, serialColIdx, result, allTouchedRooms);
                 }
                 else
                 {
                     // Matris formatı: | Room | kablolu mouse | HyperX headset | logitec | ...
-                    ImportMatrixSheet(store, sheetRows, header, result);
+                    ImportMatrixSheet(store, sheetRows, header, result, allTouchedRooms);
                 }
             }
 
+            result.RoomsImported = allTouchedRooms.Count;
             return result;
         }
 
-        private static void ImportMatrixSheet(InventoryStore store, List<List<string>> rows, List<string> header, ExcelImportResult result)
+        private static void ImportMatrixSheet(InventoryStore store, List<List<string>> rows, List<string> header, ExcelImportResult result, HashSet<string> touchedRooms)
         {
             // Sütun 1..N arası ürün adları
             var colToProduct = new Dictionary<int, ProductItem>();
@@ -377,8 +466,6 @@ namespace EnvanterSayimApp
                 var prod = FindOrCreateProduct(store, rawProdName, result);
                 colToProduct[c] = prod;
             }
-
-            var touchedRooms = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             for (int r = 1; r < rows.Count; r++)
             {
@@ -420,11 +507,138 @@ namespace EnvanterSayimApp
                     }
                 }
             }
-
-            result.RoomsImported += touchedRooms.Count;
         }
 
-        private static void ImportSerialSheet(InventoryStore store, List<List<string>> rows, List<string> normHeader, int serialColIdx, ExcelImportResult result)
+        // =====================================================================
+        // 2B. SADECE LAPTOPLAR İÇİN AYRI .XLSX / .CSV IMPORT
+        // (Diğer ürünlere ve odalara dokunmadan sadece laptop seri no listelerini yükler)
+        // =====================================================================
+        public static ExcelImportResult ImportLaptopsFromExcelOrCsv(
+            InventoryStore store,
+            string filePath,
+            bool replaceExistingSerials,
+            RoomData targetRoom = null,
+            ProductItem targetProduct = null)
+        {
+            var result = new ExcelImportResult();
+            string ext = Path.GetExtension(filePath)?.ToLowerInvariant() ?? "";
+
+            var allSheets = new List<List<List<string>>>();
+            if (ext == ".xlsx")
+                allSheets = ReadXlsxSheets(filePath);
+            else
+            {
+                var csvRows = ReadCsvRows(filePath);
+                if (csvRows.Count > 0) allSheets.Add(csvRows);
+            }
+
+            if (allSheets.Count == 0)
+                throw new Exception("Dosyada okunabilir laptop verisi bulunamadı.");
+
+            if (replaceExistingSerials)
+            {
+                if (targetRoom != null && targetProduct != null)
+                {
+                    targetRoom.GetSerials(targetProduct.Id).Clear();
+                }
+                else
+                {
+                    foreach (var r in store.Rooms)
+                    {
+                        foreach (var it in r.Items)
+                        {
+                            var prod = store.Products.FirstOrDefault(p => p.Id == it.ProductId);
+                            if (prod != null && (AppHelper.IsLaptopProduct(prod.Name) || (it.Serials != null && it.Serials.Count > 0)))
+                            {
+                                it.Serials?.Clear();
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Önce açıkça SERİ NO / SERIAL NO başlığı taşıyan sekmeleri bul
+            var serialSheets = new List<Tuple<List<List<string>>, List<string>, int>>();
+            foreach (var sheetRows in allSheets)
+            {
+                if (sheetRows == null || sheetRows.Count == 0) continue;
+                var header = sheetRows[0].Select(h => (h ?? "").Trim()).ToList();
+                var normHeader = header.Select(NormalizeHeader).ToList();
+                int serialColIdx = normHeader.FindIndex(h =>
+                    h == "SERI NO" || h == "SERIAL NO" || h == "SERIAL" ||
+                    h == "SERI NUMARASI" || h == "SERIAL NUMBER" || h == "SN");
+                if (serialColIdx >= 0)
+                {
+                    serialSheets.Add(Tuple.Create(sheetRows, normHeader, serialColIdx));
+                }
+            }
+
+            var allTouchedRooms = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (serialSheets.Count > 0)
+            {
+                foreach (var tuple in serialSheets)
+                {
+                    ImportSerialSheet(store, tuple.Item1, tuple.Item2, tuple.Item3, result, allTouchedRooms, targetRoom, targetProduct);
+                }
+            }
+            else if (targetRoom != null && targetProduct != null)
+            {
+                // Tek laptop tablosundan yükleniyorsa ve başlık yoksa (ör. düz 1 veya 2 sütunlu seri no listesi)
+                var sheetRows = allSheets[0];
+                foreach (var row in sheetRows)
+                {
+                    if (row == null || row.Count == 0) continue;
+                    string sNo = "";
+                    string status = "";
+                    if (row.Count == 1)
+                    {
+                        sNo = (row[0] ?? "").Trim();
+                    }
+                    else
+                    {
+                        string c0 = (row[0] ?? "").Trim();
+                        string c1 = (row[1] ?? "").Trim();
+                        string c2 = row.Count > 2 ? (row[2] ?? "").Trim() : "";
+                        // Eğer 1. sütun sıra numarası (1, 2, 3...) ise 2. sütun seri no, 3. sütun durumdur
+                        if (int.TryParse(c0, out _) && !string.IsNullOrWhiteSpace(c1))
+                        {
+                            sNo = c1;
+                            status = c2;
+                        }
+                        else
+                        {
+                            sNo = c0;
+                            status = c1;
+                        }
+                    }
+
+                    if (string.IsNullOrWhiteSpace(sNo)) continue;
+                    string hCheck = NormalizeHeader(sNo);
+                    if (hCheck == "SERI NO" || hCheck == "SERIAL NO" || hCheck == "NO") continue;
+
+                    if (string.IsNullOrWhiteSpace(status)) status = store.Language == "en" ? "Active" : "Aktif";
+                    UpsertSerial(targetRoom, targetProduct, sNo, status, result, allTouchedRooms);
+                }
+            }
+            else
+            {
+                throw new Exception("Laptop listesinde 'SERİ NO' veya 'SERIAL NO' sütun başlığı bulunamadı.\nÖrnek başlık: Room | Laptop | NO | SERİ NO | DURUM");
+            }
+
+            result.RoomsImported = allTouchedRooms.Count;
+            return result;
+        }
+
+        private static void ImportSerialSheet(
+            InventoryStore store,
+            List<List<string>> rows,
+            List<string> normHeader,
+            int serialColIdx,
+            ExcelImportResult result,
+            HashSet<string> touchedRooms,
+            RoomData defaultRoom = null,
+            ProductItem defaultProduct = null)
         {
             int roomColIdx = normHeader.FindIndex(h =>
                 h == "ROOM" || h == "ODA" || h == "ODA ADI");
@@ -437,9 +651,6 @@ namespace EnvanterSayimApp
             int statusColIdx = normHeader.FindIndex(h =>
                 h == "DURUM" || h == "STATUS");
 
-            if (roomColIdx < 0) roomColIdx = 0;
-            if (prodColIdx < 0) prodColIdx = 1;
-
             for (int r = 1; r < rows.Count; r++)
             {
                 var row = rows[r];
@@ -448,44 +659,59 @@ namespace EnvanterSayimApp
                 string serialNo = (row[serialColIdx] ?? "").Trim();
                 if (string.IsNullOrWhiteSpace(serialNo)) continue; // Boş şablon satırlarını atla
 
-                string roomName = (roomColIdx < row.Count ? row[roomColIdx] : "").Trim();
-                string prodName = (prodColIdx < row.Count ? row[prodColIdx] : "").Trim();
+                string roomName = (roomColIdx >= 0 && roomColIdx < row.Count ? row[roomColIdx] : "").Trim();
+                string prodName = (prodColIdx >= 0 && prodColIdx < row.Count ? row[prodColIdx] : "").Trim();
                 string status = (statusColIdx >= 0 && statusColIdx < row.Count ? row[statusColIdx] : "").Trim();
 
-                if (string.IsNullOrWhiteSpace(roomName)) roomName = "inventory";
-                if (string.IsNullOrWhiteSpace(prodName)) prodName = "laptop";
                 if (string.IsNullOrWhiteSpace(status)) status = store.Language == "en" ? "Active" : "Aktif";
 
-                var room = FindOrCreateRoom(store, roomName);
-                var prod = FindOrCreateProduct(store, prodName, result);
-
-                if (!room.HasProduct(prod.Id))
-                {
-                    room.SetQuantity(prod.Id, 1);
-                }
-
-                var list = room.GetSerials(prod.Id);
-                var existingSerial = list.FirstOrDefault(x => x.SerialNo.Equals(serialNo, StringComparison.OrdinalIgnoreCase));
-                if (existingSerial != null)
-                {
-                    existingSerial.Status = status;
-                }
+                RoomData room;
+                if (defaultRoom != null && (string.IsNullOrWhiteSpace(roomName) || defaultProduct != null))
+                    room = defaultRoom;
                 else
-                {
-                    list.Add(new SerialRecord
-                    {
-                        Id = Guid.NewGuid().ToString("N"),
-                        SerialNo = serialNo,
-                        Status = status
-                    });
-                    result.SerialsImported++;
-                }
+                    room = FindOrCreateRoom(store, string.IsNullOrWhiteSpace(roomName) ? (defaultRoom?.Name ?? "inventory") : roomName);
 
-                // Eğer odadaki adet, tablodaki seri no sayısından azsa otomatik yükselt
-                if (room.GetQuantity(prod.Id) < list.Count)
+                ProductItem prod;
+                if (defaultProduct != null && (string.IsNullOrWhiteSpace(prodName) || defaultRoom != null))
+                    prod = defaultProduct;
+                else
+                    prod = FindOrCreateProduct(store, string.IsNullOrWhiteSpace(prodName) ? (defaultProduct?.Name ?? "laptop") : prodName, result);
+
+                UpsertSerial(room, prod, serialNo, status, result, touchedRooms);
+            }
+        }
+
+        private static void UpsertSerial(RoomData room, ProductItem prod, string serialNo, string status, ExcelImportResult result, HashSet<string> touchedRooms)
+        {
+            if (!room.HasProduct(prod.Id))
+            {
+                room.SetQuantity(prod.Id, 1);
+            }
+
+            var list = room.GetSerials(prod.Id);
+            var existingSerial = list.FirstOrDefault(x => x.SerialNo.Equals(serialNo, StringComparison.OrdinalIgnoreCase));
+            if (existingSerial != null)
+            {
+                existingSerial.Status = status;
+                result.SerialsUpdated++;
+            }
+            else
+            {
+                list.Add(new SerialRecord
                 {
-                    room.SetQuantity(prod.Id, list.Count);
-                }
+                    Id = Guid.NewGuid().ToString("N"),
+                    SerialNo = serialNo,
+                    Status = status
+                });
+                result.SerialsImported++;
+            }
+
+            touchedRooms.Add(room.Id);
+
+            // Eğer odadaki adet, tablodaki seri no sayısından azsa otomatik yükselt
+            if (room.GetQuantity(prod.Id) < list.Count)
+            {
+                room.SetQuantity(prod.Id, list.Count);
             }
         }
 

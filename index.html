@@ -107,21 +107,26 @@
         </div>
       </div>
 
-      <!-- SAĞ ÜST: TELEFONA KUR, EXCEL YÜKLE & EXCEL İNDİR -->
-      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      <!-- SAĞ ÜST: TELEFONA KUR, LAPTOP EXCEL, EXCEL YÜKLE & EXCEL İNDİR -->
+      <div class="flex items-center gap-1 sm:gap-2 shrink-0">
         <button id="pwaInstallBtn" onclick="installPWA()" class="hidden items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl btn-primary text-xs font-bold shadow-sm transition">
           <i data-lucide="smartphone" class="w-4 h-4"></i>
           <span id="lblInstallApp">Telefona Kur</span>
         </button>
 
-        <label class="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl btn-primary text-xs sm:text-sm font-bold shadow-xs transition cursor-pointer">
-          <i data-lucide="upload" class="w-4 h-4"></i>
+        <button onclick="openLaptopExcelModal()" class="flex items-center gap-1 px-2 sm:px-3 py-2 rounded-xl btn-primary text-[11px] sm:text-sm font-bold shadow-xs transition">
+          <i data-lucide="laptop" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+          <span id="lblLaptopExcelBtn">Laptop Excel</span>
+        </button>
+
+        <label class="flex items-center gap-1 px-2 sm:px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-800 dark:text-white text-[11px] sm:text-sm font-bold shadow-xs transition cursor-pointer">
+          <i data-lucide="upload" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
           <span id="lblImportExcel">Excel Yükle</span>
           <input id="excelImportInput" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="importExcelFile(event)" />
         </label>
 
-        <button onclick="exportExcel()" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl btn-secondary text-xs sm:text-sm font-bold shadow-xs transition">
-          <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+        <button onclick="exportExcel()" class="flex items-center gap-1 px-2 sm:px-3 py-2 rounded-xl btn-secondary text-[11px] sm:text-sm font-bold shadow-xs transition">
+          <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
           <span id="lblExportExcel">Excel İndir</span>
         </button>
       </div>
@@ -381,17 +386,28 @@
   <div id="serialTableModal" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
       <!-- Başlık -->
-      <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 shrink-0 bg-slate-50/70 dark:bg-slate-900/50">
-        <div class="flex items-center gap-3 min-w-0">
+      <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2 shrink-0 bg-slate-50/70 dark:bg-slate-900/50">
+        <div class="flex items-center gap-3 min-w-0 flex-1">
           <img id="serialModalImg" src="" class="w-12 h-12 rounded-xl object-contain bg-white border border-slate-200 shrink-0" />
           <div class="min-w-0">
             <span id="serialModalRoomBadge" class="text-[11px] font-bold text-theme-secondary uppercase">Oda: inventory</span>
             <h3 id="serialModalTitle" class="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white truncate">dell laptop — SERİ NO TABLOSU</h3>
           </div>
         </div>
-        <button onclick="closeSerialTableModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <label class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-800 dark:text-white text-[11px] font-bold cursor-pointer">
+            <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+            <span id="lblSingleLaptopImport">Excel Yükle</span>
+            <input id="singleLaptopExcelInput" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="importLaptopExcelFile(event, true)" />
+          </label>
+          <button type="button" onclick="exportSingleLaptopExcel()" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg btn-secondary text-[11px] font-bold">
+            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+            <span id="lblSingleLaptopExport">Excel İndir</span>
+          </button>
+          <button onclick="closeSerialTableModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
       </div>
 
       <!-- Yeni Seri No & Durum Ekleme / Düzeltme Formu -->
@@ -591,6 +607,38 @@
       </div>
       <div class="bg-white flex items-center justify-center max-h-[75vh] p-4 overflow-hidden">
         <img id="lightboxImage" src="" alt="Ürün Görseli" class="max-h-[70vh] w-auto object-contain" />
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: LAPTOPLAR İÇİN AYRI EXCEL İŞLEMLERİ -->
+  <div id="laptopExcelModal" onclick="closeLaptopExcelModal()" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="laptop" class="w-5 h-5 text-theme-primary"></i>
+          <h3 id="lblLaptopExcelModalTitle" class="text-lg font-bold text-slate-900 dark:text-white">Laptop Excel Listesi</h3>
+        </div>
+        <button onclick="closeLaptopExcelModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p id="lblLaptopExcelModalDesc" class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+        Sadece laptopların oda, model, seri no ve durum listesini ayrı bir Excel (.xlsx / .csv) olarak dışa aktarabilir veya geri yükleyebilirsiniz.
+      </p>
+      <div id="lblLaptopExcelFormat" class="text-[11px] font-mono font-bold text-theme-secondary text-center px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+        Room | Laptop | NO | SERİ NO | DURUM
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+        <button type="button" onclick="exportLaptopsExcel()" class="py-3 px-4 rounded-xl btn-primary text-xs sm:text-sm font-bold shadow-sm transition flex items-center justify-center gap-2">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span id="lblLaptopExportBtn">Laptop Excel İndir</span>
+        </button>
+        <label class="py-3 px-4 rounded-xl btn-secondary text-xs sm:text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 cursor-pointer">
+          <i data-lucide="upload" class="w-4 h-4"></i>
+          <span id="lblLaptopImportBtn">Laptop Excel Yükle</span>
+          <input id="laptopExcelImportInput" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="importLaptopExcelFile(event, false)" />
+        </label>
       </div>
     </div>
   </div>
@@ -872,8 +920,16 @@
       document.getElementById('lblAppTitle').textContent = T('Envanter Sayım', 'Inventory Count');
       document.getElementById('lblAppSubtitle').textContent = T('Oda & Laptop Seri No Takip', 'Room & Laptop Serial Tracker');
       document.getElementById('lblInstallApp').textContent = T('Telefona Kur', 'Install App');
+      document.getElementById('lblLaptopExcelBtn').textContent = T('Laptop Excel', 'Laptop Excel');
       document.getElementById('lblImportExcel').textContent = T('Excel Yükle', 'Import Excel');
       document.getElementById('lblExportExcel').textContent = T('Excel İndir', 'Export Excel');
+      document.getElementById('lblSingleLaptopImport').textContent = T('Excel Yükle', 'Import Excel');
+      document.getElementById('lblSingleLaptopExport').textContent = T('Excel İndir', 'Export Excel');
+      document.getElementById('lblLaptopExcelModalTitle').textContent = T('Laptop Excel Listesi', 'Laptop Excel List');
+      document.getElementById('lblLaptopExcelModalDesc').textContent = T('Sadece laptopların oda, model, seri no ve durum listesini ayrı bir Excel (.xlsx / .csv) olarak dışa aktarabilir veya geri yükleyebilirsiniz.', 'Export or import only your laptops (room, model, serial no & status) as a dedicated Excel (.xlsx / .csv) list without affecting other items.');
+      document.getElementById('lblLaptopExcelFormat').textContent = T('Room | Laptop | NO | SERİ NO | DURUM', 'Room | Laptop | NO | SERIAL NO | STATUS');
+      document.getElementById('lblLaptopExportBtn').textContent = T('Laptop Excel İndir', 'Export Laptop Excel');
+      document.getElementById('lblLaptopImportBtn').textContent = T('Laptop Excel Yükle', 'Import Laptop Excel');
       document.getElementById('lblExcelImportTitle').textContent = T('Excel İçe Aktarma', 'Import from Excel');
       document.getElementById('lblExcelImportDesc').textContent = T('Excel verileri nasıl yüklensin? Ürün fotoğraflarınız her iki seçenekte de korunur.', 'How would you like to import Excel data? Your product photos are preserved in both options.');
       document.getElementById('lblExcelMergeBtn').textContent = T('Mevcut Odalarla Birleştir / Güncelle', 'Merge / Update Existing Rooms');
@@ -2120,6 +2176,16 @@
     }
 
     let pendingExcelSheets = null;
+    let pendingExcelContext = { mode: 'general', targetRoomId: null, targetProductId: null };
+
+    function openLaptopExcelModal() {
+      document.getElementById('laptopExcelModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeLaptopExcelModal() {
+      document.getElementById('laptopExcelModal').classList.add('hidden');
+    }
 
     function normalizeSpaces(str) {
       return String(str == null ? '' : str).trim().replace(/\s+/g, ' ');
@@ -2219,6 +2285,48 @@
       });
     }
 
+    function buildLaptopExcelRows(filterRoom = null, filterProduct = null) {
+      const products = state.products;
+      const rows = [
+        ['Room', 'Laptop', 'NO', T('SERİ NO', 'SERIAL NO'), T('DURUM', 'STATUS')]
+      ];
+      const targetRooms = filterRoom ? [filterRoom] : state.rooms;
+      let anySerialWritten = false;
+
+      targetRooms.forEach(room => {
+        Object.keys(room.items || {}).forEach(pid => {
+          if (filterProduct && pid !== filterProduct.id) return;
+          const prod = products.find(p => p.id === pid);
+          if (!prod) return;
+          const serials = getRoomProductSerials(room, pid);
+          const isLap = isLaptopProduct(prod.name);
+          if (!filterProduct && !isLap && serials.length === 0) return;
+
+          const prodLabel = L(prod.name);
+          let written = 0;
+          serials.forEach((sr, idx) => {
+            rows.push([room.name, prodLabel, idx + 1, sr.serialNo || '', L(sr.status || '')]);
+            anySerialWritten = true;
+            written++;
+          });
+
+          const qty = Math.min(Number(room.items[pid]) || 0, 50);
+          if ((isLap || filterProduct) && qty > written) {
+            for (let k = written + 1; k <= qty; k++) {
+              rows.push([room.name, prodLabel, k, '', T('Aktif', 'Active')]);
+            }
+          }
+        });
+      });
+
+      if (!anySerialWritten && rows.length === 1) {
+        const defRoom = filterRoom ? filterRoom.name : (state.rooms[0]?.name || 'inventory');
+        const defProd = filterProduct ? L(filterProduct.name) : 'dell laptop';
+        rows.push([defRoom, defProd, 1, '', T('Aktif', 'Active')]);
+      }
+      return rows;
+    }
+
     async function exportExcel() {
       const dateStr = new Date().toISOString().slice(0, 10);
       const products = state.products;
@@ -2236,38 +2344,8 @@
         sheet1Rows.push(row);
       });
 
-      // Sheet 2 (Laptop / PC Seri No Tablosu): Room | Laptop | NO | SERİ NO | DURUM
-      const sheet2Rows = [
-        ['Room', 'Laptop', 'NO', T('SERİ NO', 'SERIAL NO'), T('DURUM', 'STATUS')]
-      ];
-      let anySerialWritten = false;
-      state.rooms.forEach(room => {
-        Object.keys(room.items || {}).forEach(pid => {
-          const prod = products.find(p => p.id === pid);
-          if (!prod) return;
-          const serials = getRoomProductSerials(room, pid);
-          const isLap = isLaptopProduct(prod.name);
-          if (!isLap && serials.length === 0) return;
-
-          const prodLabel = L(prod.name);
-          let written = 0;
-          serials.forEach((sr, idx) => {
-            sheet2Rows.push([room.name, prodLabel, idx + 1, sr.serialNo || '', L(sr.status || '')]);
-            anySerialWritten = true;
-            written++;
-          });
-
-          const qty = Math.min(Number(room.items[pid]) || 0, 50);
-          if (isLap && qty > written) {
-            for (let k = written + 1; k <= qty; k++) {
-              sheet2Rows.push([room.name, prodLabel, k, '', T('Aktif', 'Active')]);
-            }
-          }
-        });
-      });
-      if (!anySerialWritten && sheet2Rows.length === 1) {
-        sheet2Rows.push(['inventory', 'dell laptop', 1, '', T('Aktif', 'Active')]);
-      }
+      // Sheet 2 (Laptop / PC Seri No Tablosu)
+      const sheet2Rows = buildLaptopExcelRows(null, null);
 
       if (window.XLSX) {
         const wb = XLSX.utils.book_new();
@@ -2284,7 +2362,6 @@
         await downloadOrShareFile(blob, `Envanter_${dateStr}.xlsx`);
         showToast(T('2 sekmeli Excel (.xlsx) indirildi', '2-sheet Excel (.xlsx) exported'), 'success');
       } else {
-        // Offline / SheetJS yüklenemezse Matris CSV olarak indir
         const csvContent = '\uFEFF' + sheet1Rows.map(r => r.map(cell => `"${String(cell == null ? '' : cell).replace(/"/g, '""')}"`).join(';')).join('\r\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         await downloadOrShareFile(blob, `Envanter_${dateStr}.csv`);
@@ -2292,17 +2369,48 @@
       }
     }
 
-    function importExcelFile(event) {
-      const file = event.target.files?.[0];
-      event.target.value = '';
-      if (!file) return;
+    async function exportLaptopsExcel(filterRoom = null, filterProduct = null) {
+      closeLaptopExcelModal();
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const rows = buildLaptopExcelRows(filterRoom, filterProduct);
+      const safeProd = filterProduct
+        ? String(filterProduct.name || 'Laptop').replace(/[^a-zA-Z0-9_\- ]/g, '').trim().replace(/\s+/g, '_')
+        : 'Laptop_Listesi';
+      const baseName = filterProduct ? `${safeProd}_SeriNolar_${dateStr}` : `Laptop_Listesi_${dateStr}`;
 
+      if (window.XLSX) {
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        ws['!cols'] = [{ wch: 20 }, { wch: 22 }, { wch: 8 }, { wch: 28 }, { wch: 22 }];
+        XLSX.utils.book_append_sheet(wb, ws, T('Laptop_Listesi', 'Laptop_List'));
+
+        const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        await downloadOrShareFile(blob, `${baseName}.xlsx`);
+        showToast(T('Laptop Excel (.xlsx) indirildi', 'Laptop Excel (.xlsx) exported'), 'success');
+      } else {
+        const csvContent = '\uFEFF' + rows.map(r => r.map(cell => `"${String(cell == null ? '' : cell).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        await downloadOrShareFile(blob, `${baseName}.csv`);
+        showToast(T('Laptop Excel (CSV) indirildi', 'Laptop Excel (CSV) exported'), 'success');
+      }
+    }
+
+    async function exportSingleLaptopExcel() {
+      const room = state.rooms.find(r => r.id === activeSerialRoomId);
+      const product = state.products.find(p => p.id === activeSerialProductId);
+      if (!room || !product) return;
+      await exportLaptopsExcel(room, product);
+    }
+
+    function readExcelFileToSheets(file, allowSingleRow, onReady) {
       const ext = (file.name.split('.').pop() || '').toLowerCase();
       const reader = new FileReader();
 
       reader.onload = (e) => {
         try {
           let sheets = [];
+          const minRows = allowSingleRow ? 1 : 2;
           if ((ext === 'xlsx' || ext === 'xls') && window.XLSX) {
             const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
             wb.SheetNames.forEach(name => {
@@ -2310,14 +2418,14 @@
               const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
                 .map(r => r.map(cell => String(cell == null ? '' : cell)))
                 .filter(r => r.some(c => c.trim() !== ''));
-              if (rows.length >= 2) sheets.push(rows);
+              if (rows.length >= minRows) sheets.push(rows);
             });
           } else if (ext === 'csv') {
             const text = typeof e.target.result === 'string'
               ? e.target.result
               : new TextDecoder('utf-8').decode(new Uint8Array(e.target.result));
             const rows = parseCsvText(text);
-            if (rows.length >= 2) sheets.push(rows);
+            if (rows.length >= minRows) sheets.push(rows);
           } else {
             throw new Error(T('XLSX okumak için internet bağlantısı veya CSV formatı gerekir.', 'Internet connection for XLSX or CSV format is required.'));
           }
@@ -2326,11 +2434,7 @@
             showToast(T('Dosyada okunabilir veri bulunamadı!', 'No readable data found in file!'), 'error');
             return;
           }
-
-          pendingExcelSheets = sheets;
-          document.getElementById('lblExcelImportFileName').textContent = file.name;
-          document.getElementById('excelImportModal').classList.remove('hidden');
-          lucide.createIcons();
+          onReady(sheets);
         } catch (err) {
           showToast(T('Excel dosyası okunamadı: ', 'Failed to read Excel file: ') + (err?.message || ''), 'error');
         }
@@ -2343,22 +2447,219 @@
       }
     }
 
+    function openExcelImportModeModal(fileName, sheets, ctx) {
+      pendingExcelSheets = sheets;
+      pendingExcelContext = ctx;
+      document.getElementById('lblExcelImportFileName').textContent = fileName;
+
+      if (ctx.mode === 'laptops') {
+        document.getElementById('lblExcelImportTitle').textContent = T('Laptop Excel Yükle', 'Import Laptop Excel');
+        document.getElementById('lblExcelImportDesc').textContent = T(
+          'Laptop seri no listesi nasıl yüklensin? Diğer ürünleriniz (mouse, kulaklık vb.) etkilenmez.',
+          'How would you like to import the Laptop Excel list? Non-laptop items are untouched.'
+        );
+        document.getElementById('lblExcelMergeBtn').textContent = T('Mevcut Laptop Seri Nolarla Birleştir', 'Merge / Update Laptop Serials');
+        document.getElementById('lblExcelReplaceBtn').textContent = T("Laptop Seri Noları Temizle & Sadece Excel'i Yükle", 'Clear Laptop Serials & Load Only Excel');
+      } else if (ctx.mode === 'singleLaptop') {
+        document.getElementById('lblExcelImportTitle').textContent = T('Bu Laptop İçin Excel Yükle', 'Import Excel for This Laptop');
+        document.getElementById('lblExcelImportDesc').textContent = T(
+          'Bu laptopun seri no tablosuna veriler nasıl aktarılsın?',
+          'How should serial numbers be imported into this laptop table?'
+        );
+        document.getElementById('lblExcelMergeBtn').textContent = T('Mevcut Listeye Ekle / Güncelle', 'Merge / Update This List');
+        document.getElementById('lblExcelReplaceBtn').textContent = T('Bu Laptop Listesini Temizle & Yükle', 'Clear This Laptop List & Load');
+      } else {
+        document.getElementById('lblExcelImportTitle').textContent = T('Excel İçe Aktarma', 'Import from Excel');
+        document.getElementById('lblExcelImportDesc').textContent = T(
+          'Excel verileri nasıl yüklensin? Ürün fotoğraflarınız her iki seçenekte de korunur.',
+          'How would you like to import Excel data? Your product photos are preserved in both options.'
+        );
+        document.getElementById('lblExcelMergeBtn').textContent = T('Mevcut Odalarla Birleştir / Güncelle', 'Merge / Update Existing Rooms');
+        document.getElementById('lblExcelReplaceBtn').textContent = T("Odaları Temizle & Sadece Excel'i Yükle", 'Clear Rooms & Load Only Excel');
+      }
+
+      document.getElementById('excelImportModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function importExcelFile(event) {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      if (!file) return;
+      readExcelFileToSheets(file, false, (sheets) => {
+        openExcelImportModeModal(file.name, sheets, { mode: 'general', targetRoomId: null, targetProductId: null });
+      });
+    }
+
+    function importLaptopExcelFile(event, isSingleLaptop) {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      if (!file) return;
+      closeLaptopExcelModal();
+      readExcelFileToSheets(file, isSingleLaptop, (sheets) => {
+        openExcelImportModeModal(file.name, sheets, {
+          mode: isSingleLaptop ? 'singleLaptop' : 'laptops',
+          targetRoomId: isSingleLaptop ? activeSerialRoomId : null,
+          targetProductId: isSingleLaptop ? activeSerialProductId : null
+        });
+      });
+    }
+
     function cancelExcelImport() {
       pendingExcelSheets = null;
       document.getElementById('excelImportModal').classList.add('hidden');
     }
 
-    async function confirmExcelImport(replaceExistingRooms) {
+    function upsertExcelSerial(room, prod, serialNo, status, stats, touchedRooms) {
+      if (!room.items) room.items = {};
+      if (!Object.prototype.hasOwnProperty.call(room.items, prod.id)) {
+        room.items[prod.id] = 1;
+      }
+      const list = getRoomProductSerials(room, prod.id);
+      const existingSerial = list.find(x => (x.serialNo || '').toLowerCase() === serialNo.toLowerCase());
+      if (existingSerial) {
+        existingSerial.status = status;
+        stats.serialsUpdated++;
+      } else {
+        list.push({
+          id: 'sr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+          serialNo,
+          status
+        });
+        stats.serialsImported++;
+      }
+      touchedRooms.add(room.id);
+      if ((Number(room.items[prod.id]) || 0) < list.length) {
+        room.items[prod.id] = list.length;
+      }
+    }
+
+    function importSerialSheetRows(rows, normHeader, serialColIdx, stats, touchedRooms, defaultRoom = null, defaultProduct = null) {
+      const roomColIdx = normHeader.findIndex(h => h === 'ROOM' || h === 'ODA' || h === 'ODA ADI');
+      const prodColIdx = normHeader.findIndex(h =>
+        h === 'LAPTOP' || h === 'LAPTOP MODEL' || h === 'PC' || h === 'BILGISAYAR' ||
+        h === 'PRODUCT' || h === 'URUN' || h === 'URUN ADI' ||
+        h === 'MODEL' || h === 'CIHAZ' || h === 'DEVICE'
+      );
+      const statusColIdx = normHeader.findIndex(h => h === 'DURUM' || h === 'STATUS');
+
+      for (let r = 1; r < rows.length; r++) {
+        const row = rows[r];
+        if (!row || serialColIdx >= row.length) continue;
+        const serialNo = String(row[serialColIdx] || '').trim();
+        if (!serialNo) continue; // Boş şablon satırlarını atla
+
+        const roomName = (roomColIdx >= 0 && roomColIdx < row.length ? String(row[roomColIdx] || '').trim() : '');
+        const prodName = (prodColIdx >= 0 && prodColIdx < row.length ? String(row[prodColIdx] || '').trim() : '');
+        const status = (statusColIdx >= 0 && statusColIdx < row.length ? String(row[statusColIdx] || '').trim() : '') || T('Aktif', 'Active');
+
+        const room = (defaultRoom && (!roomName || defaultProduct))
+          ? defaultRoom
+          : findOrCreateRoomFromExcel(roomName || defaultRoom?.name || 'inventory');
+        const prod = (defaultProduct && (!prodName || defaultRoom))
+          ? defaultProduct
+          : findOrCreateProductFromExcel(prodName || defaultProduct?.name || 'laptop', stats);
+
+        upsertExcelSerial(room, prod, serialNo, status, stats, touchedRooms);
+      }
+    }
+
+    async function confirmExcelImport(replaceExisting) {
       if (!pendingExcelSheets) return;
       const sheets = pendingExcelSheets;
+      const ctx = pendingExcelContext || { mode: 'general', targetRoomId: null, targetProductId: null };
       pendingExcelSheets = null;
       document.getElementById('excelImportModal').classList.add('hidden');
 
-      if (replaceExistingRooms) {
-        state.rooms = [];
+      const stats = { roomsImported: 0, productsAdded: 0, cellsUpdated: 0, serialsImported: 0, serialsUpdated: 0 };
+      const allTouchedRooms = new Set();
+
+      if (ctx.mode === 'laptops' || ctx.mode === 'singleLaptop') {
+        const targetRoom = ctx.targetRoomId ? state.rooms.find(r => r.id === ctx.targetRoomId) : null;
+        const targetProd = ctx.targetProductId ? state.products.find(p => p.id === ctx.targetProductId) : null;
+
+        if (replaceExisting) {
+          if (targetRoom && targetProd) {
+            if (!targetRoom.serials) targetRoom.serials = {};
+            targetRoom.serials[targetProd.id] = [];
+          } else {
+            state.rooms.forEach(r => {
+              if (!r.serials) return;
+              Object.keys(r.serials).forEach(pid => {
+                const prod = state.products.find(p => p.id === pid);
+                if (prod && (isLaptopProduct(prod.name) || (r.serials[pid] && r.serials[pid].length > 0))) {
+                  r.serials[pid] = [];
+                }
+              });
+            });
+          }
+        }
+
+        const serialSheets = [];
+        sheets.forEach(rows => {
+          if (!rows || rows.length === 0) return;
+          const normHeader = rows[0].map(h => normalizeExcelHeader(h));
+          const serialColIdx = normHeader.findIndex(h =>
+            h === 'SERI NO' || h === 'SERIAL NO' || h === 'SERIAL' ||
+            h === 'SERI NUMARASI' || h === 'SERIAL NUMBER' || h === 'SN'
+          );
+          if (serialColIdx >= 0) serialSheets.push({ rows, normHeader, serialColIdx });
+        });
+
+        if (serialSheets.length > 0) {
+          serialSheets.forEach(s => {
+            importSerialSheetRows(s.rows, s.normHeader, s.serialColIdx, stats, allTouchedRooms, targetRoom, targetProd);
+          });
+        } else if (targetRoom && targetProd) {
+          // Başlıksız basit 1-2-3 sütunlu seri no listesi
+          sheets[0].forEach(row => {
+            if (!row || row.length === 0) return;
+            let sNo = '';
+            let status = '';
+            if (row.length === 1) {
+              sNo = String(row[0] || '').trim();
+            } else {
+              const c0 = String(row[0] || '').trim();
+              const c1 = String(row[1] || '').trim();
+              const c2 = String(row[2] || '').trim();
+              if (/^\d+$/.test(c0) && c1) {
+                sNo = c1;
+                status = c2;
+              } else {
+                sNo = c0;
+                status = c1;
+              }
+            }
+            if (!sNo) return;
+            const hCheck = normalizeExcelHeader(sNo);
+            if (hCheck === 'SERI NO' || hCheck === 'SERIAL NO' || hCheck === 'NO') return;
+            upsertExcelSerial(targetRoom, targetProd, sNo, status || T('Aktif', 'Active'), stats, allTouchedRooms);
+          });
+        } else {
+          showToast(T("Dosyada 'SERİ NO' / 'SERIAL NO' sütun başlığı bulunamadı!", "No 'SERIAL NO' header column found in file!"), 'error');
+          return;
+        }
+
+        stats.roomsImported = allTouchedRooms.size;
+        await saveState();
+        renderAll();
+        if (ctx.mode === 'singleLaptop' && activeSerialRoomId && activeSerialProductId) {
+          renderSerialTableRows();
+        }
+        showToast(
+          T(
+            `Laptop Excel yüklendi! ${stats.serialsImported} yeni seri no, ${stats.serialsUpdated} güncellendi`,
+            `Laptop Excel imported! ${stats.serialsImported} new serials, ${stats.serialsUpdated} updated`
+          ),
+          'success'
+        );
+        return;
       }
 
-      const stats = { roomsImported: 0, productsAdded: 0, cellsUpdated: 0, serialsImported: 0 };
+      // GENEL ENVANTER MATRİS + SERİ NO IMPORT
+      if (replaceExisting) {
+        state.rooms = [];
+      }
 
       sheets.forEach(rows => {
         if (!rows || rows.length < 2) return;
@@ -2372,48 +2673,7 @@
         );
 
         if (serialColIdx >= 0) {
-          let roomColIdx = normHeader.findIndex(h => h === 'ROOM' || h === 'ODA' || h === 'ODA ADI');
-          let prodColIdx = normHeader.findIndex(h =>
-            h === 'LAPTOP' || h === 'LAPTOP MODEL' || h === 'PC' || h === 'BILGISAYAR' ||
-            h === 'PRODUCT' || h === 'URUN' || h === 'URUN ADI' ||
-            h === 'MODEL' || h === 'CIHAZ' || h === 'DEVICE'
-          );
-          let statusColIdx = normHeader.findIndex(h => h === 'DURUM' || h === 'STATUS');
-          if (roomColIdx < 0) roomColIdx = 0;
-          if (prodColIdx < 0) prodColIdx = 1;
-
-          for (let r = 1; r < rows.length; r++) {
-            const row = rows[r];
-            if (!row || serialColIdx >= row.length) continue;
-            const serialNo = String(row[serialColIdx] || '').trim();
-            if (!serialNo) continue; // Boş şablon satırlarını atla
-
-            const roomName = String(row[roomColIdx] || '').trim() || 'inventory';
-            const prodName = String(row[prodColIdx] || '').trim() || 'laptop';
-            const status = (statusColIdx >= 0 ? String(row[statusColIdx] || '').trim() : '') || T('Aktif', 'Active');
-
-            const room = findOrCreateRoomFromExcel(roomName);
-            const prod = findOrCreateProductFromExcel(prodName, stats);
-            if (!room.items) room.items = {};
-            if (!Object.prototype.hasOwnProperty.call(room.items, prod.id)) {
-              room.items[prod.id] = 1;
-            }
-            const list = getRoomProductSerials(room, prod.id);
-            const existingSerial = list.find(x => (x.serialNo || '').toLowerCase() === serialNo.toLowerCase());
-            if (existingSerial) {
-              existingSerial.status = status;
-            } else {
-              list.push({
-                id: 'sr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
-                serialNo,
-                status
-              });
-              stats.serialsImported++;
-            }
-            if ((Number(room.items[prod.id]) || 0) < list.length) {
-              room.items[prod.id] = list.length;
-            }
-          }
+          importSerialSheetRows(rows, normHeader, serialColIdx, stats, allTouchedRooms, null, null);
         } else {
           // Matris formatı: Room | kablolu mouse | HyperX headset | logitec | ...
           const colToProduct = {};
@@ -2423,7 +2683,6 @@
             colToProduct[c] = findOrCreateProductFromExcel(rawProd, stats);
           }
 
-          const touchedRooms = new Set();
           for (let r = 1; r < rows.length; r++) {
             const row = rows[r];
             if (!row || row.length === 0) continue;
@@ -2434,7 +2693,7 @@
 
             const room = findOrCreateRoomFromExcel(roomName);
             if (!room.items) room.items = {};
-            touchedRooms.add(room.id);
+            allTouchedRooms.add(room.id);
 
             Object.keys(colToProduct).forEach(colKey => {
               const cIdx = Number(colKey);
@@ -2452,10 +2711,10 @@
               }
             });
           }
-          stats.roomsImported += touchedRooms.size;
         }
       });
 
+      stats.roomsImported = allTouchedRooms.size;
       if (state.rooms.length > 0 && (!state.currentRoomId || !state.rooms.some(r => r.id === state.currentRoomId))) {
         state.currentRoomId = state.rooms[0].id;
       }

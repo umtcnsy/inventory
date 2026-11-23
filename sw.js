@@ -1,4 +1,4 @@
-const CACHE_NAME = 'envanter-sayim-v4';
+const CACHE_NAME = 'envanter-sayim-v5';
 const ASSETS = [
   './',
   './index.html',
