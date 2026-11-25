@@ -35,8 +35,30 @@ namespace EnvanterSayimApp
     public class RoomProductEntry
     {
         public string ProductId { get; set; }
+        public string ProductName { get; set; } = "";
         public int Quantity { get; set; }
         public List<SerialRecord> Serials { get; set; } = new List<SerialRecord>();
+    }
+
+    [Serializable]
+    public class InventoryPage
+    {
+        public string Id { get; set; } = "page_" + Guid.NewGuid().ToString("N").Substring(0, 10);
+        public string Name { get; set; } = "";
+        public string MonthKey { get; set; } = ""; // Örn: "2026-11" (Otomatik aylık sayfalar için), manuel özel sayfalarda boş
+        public string CreatedAt { get; set; } = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss");
+        public List<RoomData> Rooms { get; set; } = new List<RoomData>();
+    }
+
+    public class ComparisonRow
+    {
+        public string ProductKey { get; set; } = "";
+        public string ProductId { get; set; } = "";
+        public string ProductName { get; set; } = "";
+        public int Qty1 { get; set; }
+        public int Qty2 { get; set; }
+        public int Diff => Qty2 - Qty1;
+        public string StatusCode { get; set; } = "same"; // "new" | "increase" | "decrease" | "same"
     }
 
     [Serializable]
@@ -93,8 +115,10 @@ namespace EnvanterSayimApp
         public bool DarkMode { get; set; } = true;     // Dark / Light Mode
         public string Language { get; set; } = "tr";   // "tr" | "en"
         public int ColorTheme { get; set; } = 0;       // 0: Siyah & Beyaz, 1: Siyah & Altın, 2: Siyah & Kırmızı, 3: Gece Mavisi & Turkuaz
+        public string ActivePageId { get; set; } = "";
         public List<ProductItem> Products { get; set; } = new List<ProductItem>();
         public List<RoomData> Rooms { get; set; } = new List<RoomData>();
+        public List<InventoryPage> Pages { get; set; } = new List<InventoryPage>();
     }
 
     public class SmoothFlowPanel : FlowLayoutPanel
@@ -372,10 +396,348 @@ namespace EnvanterSayimApp
             }
         }
 
+        private static readonly string[] TrMonths = new[]
+        {
+            "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+            "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"
+        };
+
+        private static readonly string[] EnMonths = new[]
+        {
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        };
+
+        public static string GetDefaultMonthlyPageName(DateTime dt, bool isEn)
+        {
+            int idx = Math.Max(0, Math.Min(11, dt.Month - 1));
+            return isEn ? $"{EnMonths[idx]} {dt.Year} Inventory" : $"{TrMonths[idx]} {dt.Year} Envanteri";
+        }
+
+        public static string GetPageDisplayName(InventoryPage page, bool isEn)
+        {
+            if (page == null) return "";
+            if (!string.IsNullOrEmpty(page.MonthKey) && page.MonthKey.Length == 7 && page.MonthKey[4] == '-')
+            {
+                if (int.TryParse(page.MonthKey.Substring(0, 4), out int y) &&
+                    int.TryParse(page.MonthKey.Substring(5, 2), out int m) &&
+                    m >= 1 && m <= 12)
+                {
+                    string autoTr = $"{TrMonths[m - 1]} {y} Envanteri";
+                    string autoEn = $"{EnMonths[m - 1]} {y} Inventory";
+                    if (string.IsNullOrWhiteSpace(page.Name) ||
+                        page.Name.Equals(autoTr, StringComparison.OrdinalIgnoreCase) ||
+                        page.Name.Equals(autoEn, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return isEn ? autoEn : autoTr;
+                    }
+                }
+            }
+            return page.Name ?? "";
+        }
+
+        public static List<RoomData> CloneRooms(List<RoomData> source, bool zeroQuantities = false)
+        {
+            var list = new List<RoomData>();
+            if (source == null) return list;
+            foreach (var r in source)
+            {
+                var clonedRoom = new RoomData
+                {
+                    Id = r.Id,
+                    Name = r.Name,
+                    Note = r.Note,
+                    Items = new List<RoomProductEntry>()
+                };
+                if (r.Items != null)
+                {
+                    foreach (var it in r.Items)
+                    {
+                        var clonedEntry = new RoomProductEntry
+                        {
+                            ProductId = it.ProductId,
+                            ProductName = it.ProductName ?? "",
+                            Quantity = zeroQuantities ? 0 : it.Quantity,
+                            Serials = new List<SerialRecord>()
+                        };
+                        if (!zeroQuantities && it.Serials != null)
+                        {
+                            foreach (var sr in it.Serials)
+                            {
+                                clonedEntry.Serials.Add(new SerialRecord
+                                {
+                                    Id = sr.Id,
+                                    SerialNo = sr.SerialNo,
+                                    Status = sr.Status
+                                });
+                            }
+                        }
+                        clonedRoom.Items.Add(clonedEntry);
+                    }
+                }
+                list.Add(clonedRoom);
+            }
+            return list;
+        }
+
+        public static void SyncProductNameSnapshots(InventoryStore store)
+        {
+            if (store == null || store.Products == null) return;
+            var nameMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var p in store.Products)
+            {
+                if (!string.IsNullOrEmpty(p.Id)) nameMap[p.Id] = p.Name ?? "";
+            }
+
+            Action<List<RoomData>> fillRooms = rooms =>
+            {
+                if (rooms == null) return;
+                foreach (var r in rooms)
+                {
+                    if (r.Items == null) continue;
+                    foreach (var it in r.Items)
+                    {
+                        if (!string.IsNullOrEmpty(it.ProductId) && nameMap.TryGetValue(it.ProductId, out string nm))
+                            it.ProductName = nm;
+                    }
+                }
+            };
+
+            fillRooms(store.Rooms);
+            if (store.Pages != null)
+            {
+                foreach (var pg in store.Pages)
+                    fillRooms(pg.Rooms);
+            }
+        }
+
+        public static void SyncActivePageRooms(InventoryStore store)
+        {
+            if (store == null) return;
+            if (store.Pages == null) store.Pages = new List<InventoryPage>();
+            if (store.Rooms == null) store.Rooms = new List<RoomData>();
+
+            var active = store.Pages.FirstOrDefault(p => p.Id == store.ActivePageId);
+            if (active != null)
+            {
+                active.Rooms = store.Rooms;
+            }
+            SyncProductNameSnapshots(store);
+        }
+
+        public static InventoryPage EnsureCurrentMonthPage(InventoryStore store, DateTime? nowOverride = null, bool activateCurrentMonth = true)
+        {
+            if (store == null) return null;
+            if (store.Pages == null) store.Pages = new List<InventoryPage>();
+            if (store.Rooms == null) store.Rooms = new List<RoomData>();
+
+            DateTime now = nowOverride ?? DateTime.Now;
+            string monthKey = now.ToString("yyyy-MM");
+            string defaultName = GetDefaultMonthlyPageName(now, false); // Türkçe temel ad saklanır, EN modda otomatik çevrilir
+
+            // 1. Eski kayıttan geçiş (henüz Pages yoksa mevcut Rooms'u bu ayın sayfasına taşı)
+            if (store.Pages.Count == 0)
+            {
+                var migrated = new InventoryPage
+                {
+                    Id = "page_" + monthKey.Replace("-", "_"),
+                    Name = defaultName,
+                    MonthKey = monthKey,
+                    CreatedAt = now.ToString("yyyy-MM-ddTHH:mm:ss"),
+                    Rooms = CloneRooms(store.Rooms, false)
+                };
+                store.Pages.Add(migrated);
+                store.ActivePageId = migrated.Id;
+                store.Rooms = migrated.Rooms;
+                SyncProductNameSnapshots(store);
+                return migrated;
+            }
+
+            // 2. Sistem ayına ait sayfa var mı kontrol et; yoksa önceki ayları silmeden otomatik oluştur
+            var currentMonthPage = store.Pages.FirstOrDefault(p =>
+                string.Equals(p.MonthKey, monthKey, StringComparison.OrdinalIgnoreCase));
+
+            if (currentMonthPage == null)
+            {
+                var latest = store.Pages.LastOrDefault();
+                currentMonthPage = new InventoryPage
+                {
+                    Id = "page_" + monthKey.Replace("-", "_"),
+                    Name = defaultName,
+                    MonthKey = monthKey,
+                    CreatedAt = now.ToString("yyyy-MM-ddTHH:mm:ss"),
+                    Rooms = CloneRooms(latest != null ? latest.Rooms : store.Rooms, false)
+                };
+                store.Pages.Add(currentMonthPage);
+            }
+
+            // 3. Açılışta içinde bulunulan ayın sayfasını otomatik aktif yap
+            InventoryPage target = activateCurrentMonth
+                ? currentMonthPage
+                : (store.Pages.FirstOrDefault(p => p.Id == store.ActivePageId) ?? currentMonthPage);
+
+            if (target.Rooms == null) target.Rooms = new List<RoomData>();
+            store.ActivePageId = target.Id;
+            store.Rooms = target.Rooms;
+            SyncProductNameSnapshots(store);
+            return target;
+        }
+
+        public static InventoryPage SwitchActivePage(InventoryStore store, string pageId)
+        {
+            if (store == null || store.Pages == null) return null;
+            SyncActivePageRooms(store);
+            var target = store.Pages.FirstOrDefault(p => p.Id == pageId);
+            if (target == null) return null;
+            if (target.Rooms == null) target.Rooms = new List<RoomData>();
+            store.ActivePageId = target.Id;
+            store.Rooms = target.Rooms;
+            return target;
+        }
+
+        public static InventoryPage CreateManualPage(InventoryStore store, string pageName, string copyMode)
+        {
+            SyncActivePageRooms(store);
+            var sourceRooms = store.Rooms;
+            List<RoomData> newRooms;
+            if (copyMode == "copy_with_qty")
+                newRooms = CloneRooms(sourceRooms, false);
+            else if (copyMode == "copy_zero_qty")
+                newRooms = CloneRooms(sourceRooms, true);
+            else
+                newRooms = new List<RoomData>();
+
+            var page = new InventoryPage
+            {
+                Id = "page_" + Guid.NewGuid().ToString("N").Substring(0, 10),
+                Name = (pageName ?? "").Trim(),
+                MonthKey = "",
+                CreatedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
+                Rooms = newRooms
+            };
+            store.Pages.Add(page);
+            store.ActivePageId = page.Id;
+            store.Rooms = page.Rooms;
+            SyncProductNameSnapshots(store);
+            return page;
+        }
+
+        public static string GetComparisonStatusLabel(string statusCode, bool isEn)
+        {
+            switch (statusCode)
+            {
+                case "new": return isEn ? "New Item" : "Yeni Ürün";
+                case "increase": return isEn ? "Increase" : "Artış";
+                case "decrease": return isEn ? "Decrease" : "Azalış";
+                default: return isEn ? "Unchanged" : "Sabit";
+            }
+        }
+
+        private static string CanonicalProductKey(string productId, string productName)
+        {
+            string cleanName = string.Join(" ", (productName ?? "").Trim().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries));
+            if (!string.IsNullOrEmpty(cleanName))
+                return LocalizeText(cleanName, true).ToLowerInvariant();
+            return (productId ?? "").ToLowerInvariant();
+        }
+
+        public static List<ComparisonRow> BuildComparison(InventoryStore store, InventoryPage page1, InventoryPage page2)
+        {
+            var map = new Dictionary<string, ComparisonRow>(StringComparer.OrdinalIgnoreCase);
+            var productLookup = new Dictionary<string, ProductItem>(StringComparer.OrdinalIgnoreCase);
+            if (store.Products != null)
+            {
+                foreach (var p in store.Products)
+                {
+                    if (!string.IsNullOrEmpty(p.Id)) productLookup[p.Id] = p;
+                }
+            }
+
+            Action<InventoryPage, bool> accumulate = (pg, isFirst) =>
+            {
+                if (pg == null || pg.Rooms == null) return;
+                foreach (var room in pg.Rooms)
+                {
+                    if (room.Items == null) continue;
+                    foreach (var entry in room.Items)
+                    {
+                        ProductItem prod = null;
+                        if (!string.IsNullOrEmpty(entry.ProductId))
+                            productLookup.TryGetValue(entry.ProductId, out prod);
+
+                        string resolvedName = prod != null ? prod.Name : (!string.IsNullOrEmpty(entry.ProductName) ? entry.ProductName : entry.ProductId);
+                        if (string.IsNullOrWhiteSpace(resolvedName)) continue;
+
+                        string key = CanonicalProductKey(entry.ProductId, resolvedName);
+                        if (!map.TryGetValue(key, out ComparisonRow row))
+                        {
+                            row = new ComparisonRow
+                            {
+                                ProductKey = key,
+                                ProductId = prod != null ? prod.Id : (entry.ProductId ?? ""),
+                                ProductName = resolvedName,
+                                Qty1 = 0,
+                                Qty2 = 0
+                            };
+                            map[key] = row;
+                        }
+                        if (isFirst) row.Qty1 += Math.Max(0, entry.Quantity);
+                        else row.Qty2 += Math.Max(0, entry.Quantity);
+                    }
+                }
+            };
+
+            accumulate(page1, true);
+            accumulate(page2, false);
+
+            var list = new List<ComparisonRow>();
+            foreach (var row in map.Values)
+            {
+                if (row.Qty1 == 0 && row.Qty2 == 0)
+                {
+                    row.StatusCode = "same";
+                }
+                else if (row.Qty1 == 0 && row.Qty2 > 0)
+                {
+                    row.StatusCode = "new";
+                }
+                else if (row.Qty2 > row.Qty1)
+                {
+                    row.StatusCode = "increase";
+                }
+                else if (row.Qty2 < row.Qty1)
+                {
+                    row.StatusCode = "decrease";
+                }
+                else
+                {
+                    row.StatusCode = "same";
+                }
+                list.Add(row);
+            }
+
+            Func<string, int> orderWeight = code =>
+            {
+                switch (code)
+                {
+                    case "new": return 0;
+                    case "increase": return 1;
+                    case "decrease": return 2;
+                    default: return 3;
+                }
+            };
+
+            return list
+                .OrderBy(x => orderWeight(x.StatusCode))
+                .ThenBy(x => x.ProductName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
         public static void SaveStore(InventoryStore store)
         {
             try
             {
+                SyncActivePageRooms(store);
                 XmlSerializer serializer = new XmlSerializer(typeof(InventoryStore));
                 using (StreamWriter sw = new StreamWriter(DataFilePath, false, Encoding.UTF8))
                 {
@@ -399,9 +761,13 @@ namespace EnvanterSayimApp
                     using (StreamReader sr = new StreamReader(DataFilePath, Encoding.UTF8))
                     {
                         var loaded = (InventoryStore)serializer.Deserialize(sr);
-                        if (loaded != null && (loaded.Rooms.Count > 0 || loaded.Products.Count > 0))
+                        if (loaded != null && (loaded.Rooms.Count > 0 || loaded.Products.Count > 0 || (loaded.Pages != null && loaded.Pages.Count > 0)))
                         {
                             if (string.IsNullOrEmpty(loaded.Language)) loaded.Language = "tr";
+                            int beforeCount = loaded.Pages != null ? loaded.Pages.Count : 0;
+                            EnsureCurrentMonthPage(loaded, null, true);
+                            if (loaded.Pages.Count != beforeCount)
+                                SaveStore(loaded);
                             return loaded;
                         }
                     }
@@ -410,6 +776,7 @@ namespace EnvanterSayimApp
             catch { }
 
             var initial = SeedData.CreateInitialStore(true);
+            EnsureCurrentMonthPage(initial, null, true);
             SaveStore(initial);
             return initial;
         }
@@ -444,6 +811,8 @@ namespace EnvanterSayimApp
         private Color ColBorder => AppHelper.GetBorderColor(store.ColorTheme, store.DarkMode);
         private Color ColDanger => store.DarkMode ? Color.FromArgb(251, 113, 133) : Color.FromArgb(220, 38, 38);
         private Color ColDangerBg => store.DarkMode ? Color.FromArgb(64, 14, 22) : Color.FromArgb(254, 226, 226);
+        private Color ColSuccess => store.DarkMode ? Color.FromArgb(74, 222, 128) : Color.FromArgb(21, 128, 61);
+        private Color ColSuccessBg => store.DarkMode ? Color.FromArgb(14, 52, 30) : Color.FromArgb(220, 252, 231);
 
         // UI Controls
         private Panel topBar;
@@ -452,9 +821,41 @@ namespace EnvanterSayimApp
         private Button btnTabRooms;
         private Button btnTabCatalog;
         private Button btnTabSummary;
+        private Button btnTabCompare;
         private Button btnLaptopExcel;
         private Button btnImportExcel;
         private Button btnExportCsv;
+
+        // Monthly Pages Bar
+        private Panel pageBar;
+        private Label lblPagesPrefix;
+        private SmoothFlowPanel pagesFlowPanel;
+        private Panel pageRightControls;
+        private Button btnAddPage;
+        private Button btnRenamePage;
+        private Button btnDeletePage;
+
+        // Comparison Module Controls
+        private Panel comparePanel;
+        private Panel compareTopBar;
+        private Label lblCompareTitle;
+        private Label lblCmp1;
+        private ComboBox cmbComparePage1;
+        private Button btnSwapCompare;
+        private Label lblCmp2;
+        private ComboBox cmbComparePage2;
+        private Label lblCmpStatus;
+        private ComboBox cmbCompareStatus;
+        private Label lblCmpSearch;
+        private TextBox txtCompareSearch;
+        private Button btnExportCompare;
+        private FlowLayoutPanel compareKpiPanel;
+        private Label lblCompareNotice;
+        private DataGridView dgvCompare;
+        private bool suppressCompareEvents = false;
+        private string selectedComparePage1Id = null;
+        private string selectedComparePage2Id = null;
+        private List<ComparisonRow> lastComparisonRows = new List<ComparisonRow>();
 
         private Panel sidebarPanel;
         private Panel sidebarTop;
@@ -480,8 +881,8 @@ namespace EnvanterSayimApp
 
         public MainForm()
         {
-            this.Size = new Size(1280, 800);
-            this.MinimumSize = new Size(1060, 620);
+            this.Size = new Size(1340, 820);
+            this.MinimumSize = new Size(1160, 640);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
             this.DoubleBuffered = true;
@@ -552,18 +953,22 @@ namespace EnvanterSayimApp
             topBar.Controls.Add(lblLogo);
 
             // Center Tabs
-            btnTabRooms = CreateTabButton("", 270, 134);
+            btnTabRooms = CreateTabButton("", 265, 112);
             btnTabRooms.Click += (s, e) => SwitchTab("rooms");
 
-            btnTabCatalog = CreateTabButton("", 410, 134);
+            btnTabCatalog = CreateTabButton("", 383, 116);
             btnTabCatalog.Click += (s, e) => SwitchTab("catalog");
 
-            btnTabSummary = CreateTabButton("", 550, 134);
+            btnTabSummary = CreateTabButton("", 505, 112);
             btnTabSummary.Click += (s, e) => SwitchTab("summary");
+
+            btnTabCompare = CreateTabButton("", 623, 148);
+            btnTabCompare.Click += (s, e) => SwitchTab("compare");
 
             topBar.Controls.Add(btnTabRooms);
             topBar.Controls.Add(btnTabCatalog);
             topBar.Controls.Add(btnTabSummary);
+            topBar.Controls.Add(btnTabCompare);
 
             // Right Actions: Laptop Excel + General Excel Import & Export
             FlowLayoutPanel rightActions = new FlowLayoutPanel
@@ -578,9 +983,9 @@ namespace EnvanterSayimApp
             btnExportCsv = new Button
             {
                 Text = "",
-                Size = new Size(110, 38),
+                Size = new Size(102, 38),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8.8f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8.6f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(6, 0, 0, 0)
             };
@@ -590,9 +995,9 @@ namespace EnvanterSayimApp
             btnImportExcel = new Button
             {
                 Text = "",
-                Size = new Size(110, 38),
+                Size = new Size(102, 38),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8.8f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8.6f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(6, 0, 0, 0)
             };
@@ -602,9 +1007,9 @@ namespace EnvanterSayimApp
             btnLaptopExcel = new Button
             {
                 Text = "",
-                Size = new Size(124, 38),
+                Size = new Size(112, 38),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 8.8f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 8.6f, FontStyle.Bold),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(6, 0, 0, 0)
             };
@@ -615,6 +1020,86 @@ namespace EnvanterSayimApp
             rightActions.Controls.Add(btnImportExcel);
             rightActions.Controls.Add(btnLaptopExcel);
             topBar.Controls.Add(rightActions);
+
+            // 1B. MONTHLY INVENTORY PAGES BAR (OTOMATİK AYLIK SAYFALAR + YENİ SAYFA EKLE)
+            pageBar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 48,
+                Padding = new Padding(14, 6, 16, 6)
+            };
+            pageBar.Paint += (s, e) =>
+            {
+                using (Pen p = new Pen(ColBorder, 1))
+                    e.Graphics.DrawLine(p, 0, pageBar.Height - 1, pageBar.Width, pageBar.Height - 1);
+            };
+
+            lblPagesPrefix = new Label
+            {
+                Text = "",
+                Dock = DockStyle.Left,
+                AutoSize = false,
+                Width = 112,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold)
+            };
+
+            pageRightControls = new Panel
+            {
+                Dock = DockStyle.Right,
+                Width = 310
+            };
+
+            btnAddPage = new Button
+            {
+                Text = "",
+                Location = new Point(4, 2),
+                Size = new Size(158, 32),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.8f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnAddPage.FlatAppearance.BorderSize = 0;
+            btnAddPage.Click += (s, e) => OpenNewPageDialog();
+
+            btnRenamePage = new Button
+            {
+                Text = "",
+                Location = new Point(168, 2),
+                Size = new Size(76, 32),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.2f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnRenamePage.FlatAppearance.BorderSize = 1;
+            btnRenamePage.Click += (s, e) => OpenRenamePageDialog();
+
+            btnDeletePage = new Button
+            {
+                Text = "",
+                Location = new Point(250, 2),
+                Size = new Size(56, 32),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.2f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnDeletePage.FlatAppearance.BorderSize = 0;
+            btnDeletePage.Click += (s, e) => DeleteActivePage();
+
+            pageRightControls.Controls.AddRange(new Control[] { btnAddPage, btnRenamePage, btnDeletePage });
+
+            pagesFlowPanel = new SmoothFlowPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                AutoScroll = true,
+                Padding = new Padding(0, 1, 0, 0)
+            };
+
+            pageBar.Controls.Add(pagesFlowPanel);
+            pageBar.Controls.Add(pageRightControls);
+            pageBar.Controls.Add(lblPagesPrefix);
 
             // 2. LEFT SIDEBAR (ROOMS)
             sidebarPanel = new Panel
@@ -822,11 +1307,203 @@ namespace EnvanterSayimApp
             mainArea.Controls.Add(mainCardsPanel);
             mainArea.Controls.Add(contentHeaderPanel);
 
+            // 4. COMPARISON MODULE PANEL (ITEM BAZLI AYLIK KARŞILAŞTIRMA)
+            BuildComparisonPanel();
+            mainArea.Controls.Add(comparePanel);
+
             this.Controls.Add(mainArea);
             this.Controls.Add(sidebarPanel);
+            this.Controls.Add(pageBar);
             this.Controls.Add(topBar);
 
             LayoutContentHeader();
+        }
+
+        private void BuildComparisonPanel()
+        {
+            comparePanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Visible = false,
+                Padding = new Padding(0)
+            };
+
+            compareTopBar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 116,
+                Padding = new Padding(16, 12, 16, 10)
+            };
+            compareTopBar.Paint += (s, e) =>
+            {
+                using (Pen p = new Pen(ColBorder, 1))
+                    e.Graphics.DrawLine(p, 0, compareTopBar.Height - 1, compareTopBar.Width, compareTopBar.Height - 1);
+            };
+
+            lblCompareTitle = new Label
+            {
+                Text = "",
+                Font = new Font("Segoe UI", 14.5f, FontStyle.Bold),
+                Location = new Point(16, 10),
+                AutoSize = true
+            };
+
+            btnExportCompare = new Button
+            {
+                Text = "",
+                Size = new Size(190, 34),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.8f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            btnExportCompare.FlatAppearance.BorderSize = 0;
+            btnExportCompare.Click += (s, e) => ExportComparisonToExcel();
+
+            lblCmp1 = new Label { Text = "", Font = new Font("Segoe UI", 8.5f, FontStyle.Bold), Location = new Point(16, 48), AutoSize = true };
+            cmbComparePage1 = new ComboBox
+            {
+                Location = new Point(16, 68),
+                Size = new Size(220, 30),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold)
+            };
+            cmbComparePage1.SelectedIndexChanged += (s, e) =>
+            {
+                if (suppressCompareEvents) return;
+                if (cmbComparePage1.SelectedIndex >= 0 && cmbComparePage1.SelectedIndex < store.Pages.Count)
+                    selectedComparePage1Id = store.Pages[cmbComparePage1.SelectedIndex].Id;
+                RenderComparisonTable();
+            };
+
+            btnSwapCompare = new Button
+            {
+                Text = "⇄",
+                Location = new Point(244, 67),
+                Size = new Size(38, 28),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnSwapCompare.FlatAppearance.BorderSize = 1;
+            btnSwapCompare.Click += (s, e) =>
+            {
+                string tmp = selectedComparePage1Id;
+                selectedComparePage1Id = selectedComparePage2Id;
+                selectedComparePage2Id = tmp;
+                RenderComparisonView();
+            };
+
+            lblCmp2 = new Label { Text = "", Font = new Font("Segoe UI", 8.5f, FontStyle.Bold), Location = new Point(290, 48), AutoSize = true };
+            cmbComparePage2 = new ComboBox
+            {
+                Location = new Point(290, 68),
+                Size = new Size(220, 30),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold)
+            };
+            cmbComparePage2.SelectedIndexChanged += (s, e) =>
+            {
+                if (suppressCompareEvents) return;
+                if (cmbComparePage2.SelectedIndex >= 0 && cmbComparePage2.SelectedIndex < store.Pages.Count)
+                    selectedComparePage2Id = store.Pages[cmbComparePage2.SelectedIndex].Id;
+                RenderComparisonTable();
+            };
+
+            lblCmpStatus = new Label { Text = "", Font = new Font("Segoe UI", 8.5f, FontStyle.Bold), Location = new Point(526, 48), AutoSize = true };
+            cmbCompareStatus = new ComboBox
+            {
+                Location = new Point(526, 68),
+                Size = new Size(155, 30),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9.2f, FontStyle.Bold)
+            };
+            cmbCompareStatus.SelectedIndexChanged += (s, e) => { if (!suppressCompareEvents) RenderComparisonTable(); };
+
+            lblCmpSearch = new Label { Text = "", Font = new Font("Segoe UI", 8.5f, FontStyle.Bold), Location = new Point(696, 48), AutoSize = true };
+            txtCompareSearch = new TextBox
+            {
+                Location = new Point(696, 68),
+                Size = new Size(220, 28),
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Segoe UI", 9.5f)
+            };
+            txtCompareSearch.TextChanged += (s, e) => { if (!suppressCompareEvents) RenderComparisonTable(); };
+
+            compareTopBar.Resize += (s, e) =>
+            {
+                btnExportCompare.Location = new Point(Math.Max(340, compareTopBar.Width - btnExportCompare.Width - 16), 12);
+                txtCompareSearch.Width = Math.Max(150, compareTopBar.Width - txtCompareSearch.Left - 16);
+            };
+
+            compareTopBar.Controls.AddRange(new Control[]
+            {
+                lblCompareTitle, btnExportCompare,
+                lblCmp1, cmbComparePage1, btnSwapCompare, lblCmp2, cmbComparePage2,
+                lblCmpStatus, cmbCompareStatus, lblCmpSearch, txtCompareSearch
+            });
+
+            compareKpiPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                Height = 62,
+                Padding = new Padding(12, 10, 12, 6),
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false
+            };
+
+            lblCompareNotice = new Label
+            {
+                Dock = DockStyle.Top,
+                Height = 36,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(18, 0, 18, 0),
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                Visible = false
+            };
+
+            dgvCompare = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                ReadOnly = true,
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                AllowUserToResizeRows = false,
+                RowHeadersVisible = false,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                MultiSelect = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                BorderStyle = BorderStyle.None,
+                EnableHeadersVisualStyles = false,
+                CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
+                ColumnHeadersHeight = 42,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing
+            };
+            dgvCompare.RowTemplate.Height = 38;
+            dgvCompare.Columns.Add(new DataGridViewTextBoxColumn { Name = "ColProduct", HeaderText = "Ürün Adı", FillWeight = 34 });
+            dgvCompare.Columns.Add(new DataGridViewTextBoxColumn { Name = "ColQty1", HeaderText = "1. Ay Miktarı", FillWeight = 18 });
+            dgvCompare.Columns.Add(new DataGridViewTextBoxColumn { Name = "ColQty2", HeaderText = "2. Ay Miktarı", FillWeight = 18 });
+            dgvCompare.Columns.Add(new DataGridViewTextBoxColumn { Name = "ColDiff", HeaderText = "Fark (+/-)", FillWeight = 14 });
+            dgvCompare.Columns.Add(new DataGridViewTextBoxColumn { Name = "ColStatus", HeaderText = "Durum", FillWeight = 16 });
+            dgvCompare.Columns["ColQty1"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dgvCompare.Columns["ColQty2"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dgvCompare.Columns["ColDiff"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dgvCompare.Columns["ColStatus"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+
+            Panel tableWrap = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(16, 4, 16, 16)
+            };
+            tableWrap.Controls.Add(dgvCompare);
+
+            comparePanel.Controls.Add(tableWrap);
+            comparePanel.Controls.Add(lblCompareNotice);
+            comparePanel.Controls.Add(compareKpiPanel);
+            comparePanel.Controls.Add(compareTopBar);
         }
 
         // =====================================================================
@@ -1044,13 +1721,12 @@ namespace EnvanterSayimApp
                 btnRestoreInventory.FlatAppearance.BorderSize = 0;
                 btnRestoreInventory.Click += (s, e) =>
                 {
-                    bool dark = store.DarkMode;
-                    string lang = store.Language;
-                    int theme = store.ColorTheme;
+                    var seed = SeedData.CreateInitialStore(store.DarkMode);
                     AppHelper.ClearImageCache();
-                    store = SeedData.CreateInitialStore(dark);
-                    store.Language = lang;
-                    store.ColorTheme = theme;
+                    // Ürün kataloğunu ve mevcut aktif sayfanın odalarını varsayılan envantere döndür (diğer ayların sayfaları korunur)
+                    store.Products = seed.Products;
+                    store.Rooms = AppHelper.CloneRooms(seed.Rooms, false);
+                    AppHelper.SyncActivePageRooms(store);
                     currentRoomId = store.Rooms.FirstOrDefault()?.Id;
                     AppHelper.SaveStore(store);
                     RefreshAll();
@@ -1096,9 +1772,10 @@ namespace EnvanterSayimApp
             lblLogo.Text = T("Envanter Sayım", "Inventory Count");
             lblLogo.ForeColor = ColTextDark;
 
-            btnTabRooms.Text = T("Odalar ve Sayım", "Rooms & Count");
+            btnTabRooms.Text = T("Odalar", "Rooms");
             btnTabCatalog.Text = T("Ürün Havuzu", "Product Pool");
-            btnTabSummary.Text = T("Genel Özet", "Global Summary");
+            btnTabSummary.Text = T("Genel Özet", "Summary");
+            btnTabCompare.Text = T("Ayları Karşılaştır", "Compare Months");
 
             btnLaptopExcel.Text = T("Laptop Excel", "Laptop Excel");
             btnLaptopExcel.BackColor = ColPrimary;
@@ -1112,6 +1789,79 @@ namespace EnvanterSayimApp
             btnImportExcel.BackColor = ColSurfaceAlt;
             btnImportExcel.ForeColor = ColTextDark;
             btnImportExcel.FlatAppearance.BorderColor = ColBorder;
+
+            // Monthly Page Bar
+            pageBar.BackColor = ColBg;
+            lblPagesPrefix.Text = T("AYLIK SAYFALAR:", "MONTHLY PAGES:");
+            lblPagesPrefix.ForeColor = ColTextMuted;
+            pagesFlowPanel.BackColor = ColBg;
+            pageRightControls.BackColor = ColBg;
+
+            btnAddPage.Text = T("+ Yeni Sayfa Ekle", "+ Add New Page");
+            btnAddPage.BackColor = ColPrimary;
+            btnAddPage.ForeColor = ColPrimaryFore;
+
+            btnRenamePage.Text = T("Yeniden Adl.", "Rename");
+            btnRenamePage.BackColor = ColSurfaceAlt;
+            btnRenamePage.ForeColor = ColTextDark;
+            btnRenamePage.FlatAppearance.BorderColor = ColBorder;
+
+            btnDeletePage.Text = T("Sil", "Del");
+            btnDeletePage.BackColor = ColDangerBg;
+            btnDeletePage.ForeColor = ColDanger;
+
+            // Comparison Panel Theme & Texts
+            comparePanel.BackColor = ColBg;
+            compareTopBar.BackColor = ColCard;
+            lblCompareTitle.Text = T("Item Bazlı Aylık Envanter Karşılaştırması", "Item-Based Monthly Inventory Comparison");
+            lblCompareTitle.ForeColor = ColTextDark;
+
+            btnExportCompare.Text = T("Karşılaştırmayı Excel İndir", "Export Comparison Excel");
+            btnExportCompare.BackColor = ColSecondary;
+            btnExportCompare.ForeColor = ColSecondaryFore;
+
+            lblCmp1.Text = T("1. Seçilen Sayfa / Ay:", "1st Selected Page / Month:");
+            lblCmp1.ForeColor = ColTextMuted;
+            cmbComparePage1.BackColor = ColInputBg;
+            cmbComparePage1.ForeColor = ColTextDark;
+
+            btnSwapCompare.BackColor = ColSurfaceAlt;
+            btnSwapCompare.ForeColor = ColTextDark;
+            btnSwapCompare.FlatAppearance.BorderColor = ColBorder;
+
+            lblCmp2.Text = T("2. Seçilen Sayfa / Ay:", "2nd Selected Page / Month:");
+            lblCmp2.ForeColor = ColTextMuted;
+            cmbComparePage2.BackColor = ColInputBg;
+            cmbComparePage2.ForeColor = ColTextDark;
+
+            lblCmpStatus.Text = T("Durum Filtresi:", "Status Filter:");
+            lblCmpStatus.ForeColor = ColTextMuted;
+            cmbCompareStatus.BackColor = ColInputBg;
+            cmbCompareStatus.ForeColor = ColTextDark;
+
+            lblCmpSearch.Text = T("Ürün Ara:", "Search Item:");
+            lblCmpSearch.ForeColor = ColTextMuted;
+            txtCompareSearch.BackColor = ColInputBg;
+            txtCompareSearch.ForeColor = ColTextDark;
+
+            compareKpiPanel.BackColor = ColBg;
+            lblCompareNotice.BackColor = ColPrimarySoft;
+            lblCompareNotice.ForeColor = ColTextDark;
+
+            dgvCompare.BackgroundColor = ColCard;
+            dgvCompare.GridColor = ColBorder;
+            dgvCompare.ColumnHeadersDefaultCellStyle.BackColor = ColSurfaceAlt;
+            dgvCompare.ColumnHeadersDefaultCellStyle.ForeColor = ColTextDark;
+            dgvCompare.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+            dgvCompare.ColumnHeadersDefaultCellStyle.SelectionBackColor = ColSurfaceAlt;
+            dgvCompare.ColumnHeadersDefaultCellStyle.SelectionForeColor = ColTextDark;
+            dgvCompare.DefaultCellStyle.BackColor = ColCard;
+            dgvCompare.DefaultCellStyle.ForeColor = ColTextDark;
+            dgvCompare.DefaultCellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
+            dgvCompare.DefaultCellStyle.SelectionBackColor = ColPrimarySoft;
+            dgvCompare.DefaultCellStyle.SelectionForeColor = ColTextDark;
+            dgvCompare.AlternatingRowsDefaultCellStyle.BackColor = store.DarkMode ? Color.FromArgb(22, 22, 27) : Color.FromArgb(248, 248, 250);
+            dgvCompare.AlternatingRowsDefaultCellStyle.ForeColor = ColTextDark;
 
             sidebarPanel.BackColor = ColCard;
             sidebarTop.BackColor = ColCard;
@@ -1155,8 +1905,10 @@ namespace EnvanterSayimApp
             mainCardsPanel.BackColor = ColBg;
 
             topBar.Invalidate();
+            pageBar.Invalidate();
             sidebarPanel.Invalidate();
             contentHeaderPanel.Invalidate();
+            compareTopBar.Invalidate();
         }
 
         private void LayoutContentHeader()
@@ -1218,7 +1970,8 @@ namespace EnvanterSayimApp
             {
                 { "rooms", btnTabRooms },
                 { "catalog", btnTabCatalog },
-                { "summary", btnTabSummary }
+                { "summary", btnTabSummary },
+                { "compare", btnTabCompare }
             };
 
             foreach (var kv in tabs)
@@ -1231,20 +1984,509 @@ namespace EnvanterSayimApp
 
         public void RefreshAll()
         {
+            AppHelper.EnsureCurrentMonthPage(store, null, false);
             UpdateTabButtonStyles();
             UpdateViewToggleStyle();
+            RenderPageBar();
 
+            bool isCompare = (activeTab == "compare");
+            comparePanel.Visible = isCompare;
+            contentHeaderPanel.Visible = !isCompare;
+            mainCardsPanel.Visible = !isCompare;
             sidebarPanel.Visible = (activeTab == "rooms");
+
+            if (isCompare)
+            {
+                RenderComparisonView();
+                return;
+            }
 
             if (activeTab == "rooms")
             {
-                if (currentRoomId == null && store.Rooms.Count > 0)
-                    currentRoomId = store.Rooms[0].Id;
+                if (currentRoomId == null || !store.Rooms.Any(r => r.Id == currentRoomId))
+                    currentRoomId = store.Rooms.FirstOrDefault()?.Id;
 
                 RenderRoomsSidebar();
             }
 
             RenderMainCards();
+        }
+
+        // =====================================================================
+        // MONTHLY PAGES BAR & MANUAL PAGE MANAGEMENT
+        // =====================================================================
+        private void RenderPageBar()
+        {
+            pagesFlowPanel.SuspendLayout();
+            foreach (Control c in pagesFlowPanel.Controls) c.Dispose();
+            pagesFlowPanel.Controls.Clear();
+
+            foreach (var page in store.Pages)
+            {
+                bool isActive = (page.Id == store.ActivePageId);
+                string dispName = AppHelper.GetPageDisplayName(page, IsEN);
+
+                Button pill = new Button
+                {
+                    Text = isActive ? "● " + dispName : dispName,
+                    AutoSize = true,
+                    MinimumSize = new Size(120, 32),
+                    Height = 32,
+                    Padding = new Padding(10, 0, 10, 0),
+                    Margin = new Padding(0, 1, 6, 0),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = isActive ? ColPrimary : ColSurfaceAlt,
+                    ForeColor = isActive ? ColPrimaryFore : ColTextDark,
+                    Font = new Font("Segoe UI", 8.6f, isActive ? FontStyle.Bold : FontStyle.Regular),
+                    Cursor = Cursors.Hand
+                };
+                pill.FlatAppearance.BorderColor = isActive ? ColPrimary : ColBorder;
+                pill.FlatAppearance.BorderSize = 1;
+
+                string targetId = page.Id;
+                pill.Click += (s, e) => SwitchToPage(targetId);
+                pagesFlowPanel.Controls.Add(pill);
+            }
+
+            btnDeletePage.Enabled = store.Pages.Count > 1;
+            pagesFlowPanel.ResumeLayout();
+        }
+
+        private void SwitchToPage(string pageId)
+        {
+            if (store.ActivePageId == pageId) return;
+            AppHelper.SwitchActivePage(store, pageId);
+            currentRoomId = store.Rooms.FirstOrDefault()?.Id;
+            AppHelper.SaveStore(store);
+            RefreshAll();
+        }
+
+        private void OpenNewPageDialog()
+        {
+            using (Form dlg = new Form())
+            {
+                dlg.Text = T("Yeni Envanter Sayfası Ekle", "Add New Inventory Page");
+                dlg.Size = new Size(460, 290);
+                dlg.StartPosition = FormStartPosition.CenterParent;
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dlg.MaximizeBox = false;
+                dlg.MinimizeBox = false;
+                dlg.BackColor = ColCard;
+                dlg.ForeColor = ColTextDark;
+                dlg.Font = new Font("Segoe UI", 9.5f);
+                dlg.HandleCreated += (s, e) => AppHelper.ApplyWindowTitleBarTheme(dlg, store.DarkMode);
+
+                Label lblName = new Label
+                {
+                    Text = T("Sayfa Adı (Örn: Aralık 2026 Envanteri, Yıl Sonu Sayımı) *", "Page Name (e.g. December 2026 Inventory, Year-End Count) *"),
+                    Location = new Point(20, 18),
+                    Size = new Size(405, 22),
+                    Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                    ForeColor = ColTextDark
+                };
+
+                TextBox txtName = new TextBox
+                {
+                    Location = new Point(20, 44),
+                    Size = new Size(405, 30),
+                    BackColor = ColInputBg,
+                    ForeColor = ColTextDark,
+                    BorderStyle = BorderStyle.FixedSingle,
+                    Font = new Font("Segoe UI", 10f)
+                };
+
+                Label lblMode = new Label
+                {
+                    Text = T("Başlangıç İçeriği:", "Initial Content:"),
+                    Location = new Point(20, 88),
+                    AutoSize = true,
+                    Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                    ForeColor = ColTextDark
+                };
+
+                RadioButton rbCopyQty = new RadioButton
+                {
+                    Text = T("Mevcut sayfadaki odaları ve miktarları kopyala", "Copy rooms and quantities from current page"),
+                    Location = new Point(22, 114),
+                    Size = new Size(405, 24),
+                    Checked = true,
+                    ForeColor = ColTextDark
+                };
+                RadioButton rbCopyZero = new RadioButton
+                {
+                    Text = T("Odaları ve ürünleri kopyala, miktarları 0 başlat", "Copy rooms & items, start quantities at 0"),
+                    Location = new Point(22, 140),
+                    Size = new Size(405, 24),
+                    ForeColor = ColTextDark
+                };
+                RadioButton rbEmpty = new RadioButton
+                {
+                    Text = T("Tamamen boş sayfa oluştur", "Create a completely empty page"),
+                    Location = new Point(22, 166),
+                    Size = new Size(405, 24),
+                    ForeColor = ColTextDark
+                };
+
+                Button btnCreate = new Button
+                {
+                    Text = T("Sayfayı Oluştur", "Create Page"),
+                    Location = new Point(245, 204),
+                    Size = new Size(180, 38),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = ColPrimary,
+                    ForeColor = ColPrimaryFore,
+                    Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                btnCreate.FlatAppearance.BorderSize = 0;
+                btnCreate.Click += (s, e) =>
+                {
+                    string name = (txtName.Text ?? "").Trim();
+                    if (string.IsNullOrEmpty(name))
+                    {
+                        MessageBox.Show(T("Lütfen bir sayfa adı girin.", "Please enter a page name."), T("Uyarı", "Warning"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        txtName.Focus();
+                        return;
+                    }
+                    string mode = rbCopyQty.Checked ? "copy_with_qty" : (rbCopyZero.Checked ? "copy_zero_qty" : "empty");
+                    AppHelper.CreateManualPage(store, name, mode);
+                    currentRoomId = store.Rooms.FirstOrDefault()?.Id;
+                    AppHelper.SaveStore(store);
+                    RefreshAll();
+                    dlg.DialogResult = DialogResult.OK;
+                };
+
+                Button btnCancel = new Button
+                {
+                    Text = T("İptal", "Cancel"),
+                    Location = new Point(145, 204),
+                    Size = new Size(92, 38),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = ColSurfaceAlt,
+                    ForeColor = ColTextDark,
+                    Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                btnCancel.FlatAppearance.BorderSize = 0;
+                btnCancel.Click += (s, e) => dlg.Close();
+
+                dlg.Controls.AddRange(new Control[] { lblName, txtName, lblMode, rbCopyQty, rbCopyZero, rbEmpty, btnCancel, btnCreate });
+                dlg.AcceptButton = btnCreate;
+                dlg.ShowDialog(this);
+            }
+        }
+
+        private void OpenRenamePageDialog()
+        {
+            var active = store.Pages.FirstOrDefault(p => p.Id == store.ActivePageId);
+            if (active == null) return;
+
+            using (Form dlg = new Form())
+            {
+                dlg.Text = T("Sayfa Adını Düzenle", "Rename Page");
+                dlg.Size = new Size(420, 185);
+                dlg.StartPosition = FormStartPosition.CenterParent;
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dlg.MaximizeBox = false;
+                dlg.MinimizeBox = false;
+                dlg.BackColor = ColCard;
+                dlg.ForeColor = ColTextDark;
+                dlg.Font = new Font("Segoe UI", 9.5f);
+                dlg.HandleCreated += (s, e) => AppHelper.ApplyWindowTitleBarTheme(dlg, store.DarkMode);
+
+                Label lbl = new Label { Text = T("Yeni Sayfa Adı:", "New Page Name:"), Location = new Point(20, 18), AutoSize = true, Font = new Font("Segoe UI", 9f, FontStyle.Bold), ForeColor = ColTextDark };
+                TextBox txt = new TextBox
+                {
+                    Text = AppHelper.GetPageDisplayName(active, IsEN),
+                    Location = new Point(20, 44),
+                    Size = new Size(364, 30),
+                    BackColor = ColInputBg,
+                    ForeColor = ColTextDark,
+                    BorderStyle = BorderStyle.FixedSingle,
+                    Font = new Font("Segoe UI", 10f)
+                };
+
+                Button btnSave = new Button
+                {
+                    Text = T("Kaydet", "Save"),
+                    Location = new Point(264, 92),
+                    Size = new Size(120, 36),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = ColPrimary,
+                    ForeColor = ColPrimaryFore,
+                    Font = new Font("Segoe UI", 9.2f, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                btnSave.FlatAppearance.BorderSize = 0;
+                btnSave.Click += (s, e) =>
+                {
+                    string n = (txt.Text ?? "").Trim();
+                    if (string.IsNullOrEmpty(n)) return;
+                    active.Name = n;
+                    AppHelper.SaveStore(store);
+                    RefreshAll();
+                    dlg.DialogResult = DialogResult.OK;
+                };
+
+                dlg.Controls.AddRange(new Control[] { lbl, txt, btnSave });
+                dlg.AcceptButton = btnSave;
+                dlg.ShowDialog(this);
+            }
+        }
+
+        private void DeleteActivePage()
+        {
+            if (store.Pages.Count <= 1) return;
+            var active = store.Pages.FirstOrDefault(p => p.Id == store.ActivePageId);
+            if (active == null) return;
+
+            string name = AppHelper.GetPageDisplayName(active, IsEN);
+            var confirm = MessageBox.Show(
+                T($"\"{name}\" sayfasını silmek istediğinize emin misiniz? (Diğer aylara ait sayfalar ve ürün kataloğu korunur)",
+                  $"Delete page \"{name}\"? (Other monthly pages and product catalog are preserved)"),
+                T("Sayfayı Sil", "Delete Page"),
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (confirm == DialogResult.Yes)
+            {
+                store.Pages.Remove(active);
+                var next = store.Pages.Last();
+                store.ActivePageId = next.Id;
+                store.Rooms = next.Rooms;
+                currentRoomId = store.Rooms.FirstOrDefault()?.Id;
+                AppHelper.SaveStore(store);
+                RefreshAll();
+            }
+        }
+
+        // =====================================================================
+        // ITEM-BASED MONTHLY COMPARISON MODULE (AYLARI KARŞILAŞTIR)
+        // =====================================================================
+        private void RenderComparisonView()
+        {
+            AppHelper.SyncActivePageRooms(store);
+            suppressCompareEvents = true;
+
+            cmbComparePage1.Items.Clear();
+            cmbComparePage2.Items.Clear();
+            foreach (var p in store.Pages)
+            {
+                string lbl = AppHelper.GetPageDisplayName(p, IsEN);
+                cmbComparePage1.Items.Add(lbl);
+                cmbComparePage2.Items.Add(lbl);
+            }
+
+            if (store.Pages.Count > 0)
+            {
+                if (string.IsNullOrEmpty(selectedComparePage2Id) || !store.Pages.Any(p => p.Id == selectedComparePage2Id))
+                    selectedComparePage2Id = store.ActivePageId;
+
+                if (string.IsNullOrEmpty(selectedComparePage1Id) || !store.Pages.Any(p => p.Id == selectedComparePage1Id))
+                {
+                    var other = store.Pages.LastOrDefault(p => p.Id != selectedComparePage2Id);
+                    selectedComparePage1Id = other != null ? other.Id : store.Pages[0].Id;
+                }
+
+                int idx1 = store.Pages.FindIndex(p => p.Id == selectedComparePage1Id);
+                int idx2 = store.Pages.FindIndex(p => p.Id == selectedComparePage2Id);
+                cmbComparePage1.SelectedIndex = Math.Max(0, idx1);
+                cmbComparePage2.SelectedIndex = Math.Max(0, idx2);
+            }
+
+            int prevStatusIdx = cmbCompareStatus.SelectedIndex;
+            cmbCompareStatus.Items.Clear();
+            cmbCompareStatus.Items.AddRange(new object[]
+            {
+                T("Tümü", "All"),
+                T("Artış", "Increase"),
+                T("Azalış", "Decrease"),
+                T("Yeni Ürün", "New Item"),
+                T("Sabit", "Unchanged")
+            });
+            cmbCompareStatus.SelectedIndex = (prevStatusIdx >= 0 && prevStatusIdx < 5) ? prevStatusIdx : 0;
+
+            lblCompareNotice.Visible = store.Pages.Count < 2;
+            lblCompareNotice.Text = T(
+                "Bilgi: Şu an 1 envanter sayfası bulunuyor. İki farklı ayı karşılaştırmak için yukarıdaki '+ Yeni Sayfa Ekle' butonuyla yeni bir sayfa oluşturabilirsiniz.",
+                "Tip: You currently have 1 inventory page. Click '+ Add New Page' above to create another month/page for comparison.");
+
+            suppressCompareEvents = false;
+            RenderComparisonTable();
+        }
+
+        private void RenderComparisonTable()
+        {
+            if (store.Pages.Count == 0) return;
+
+            var page1 = store.Pages.FirstOrDefault(p => p.Id == selectedComparePage1Id) ?? store.Pages[0];
+            var page2 = store.Pages.FirstOrDefault(p => p.Id == selectedComparePage2Id) ?? store.Pages[store.Pages.Count - 1];
+
+            string p1Name = AppHelper.GetPageDisplayName(page1, IsEN);
+            string p2Name = AppHelper.GetPageDisplayName(page2, IsEN);
+
+            dgvCompare.Columns["ColProduct"].HeaderText = T("Ürün Adı", "Product Name");
+            dgvCompare.Columns["ColQty1"].HeaderText = IsEN ? $"{p1Name} Qty" : $"{p1Name} Miktarı";
+            dgvCompare.Columns["ColQty2"].HeaderText = IsEN ? $"{p2Name} Qty" : $"{p2Name} Miktarı";
+            dgvCompare.Columns["ColDiff"].HeaderText = T("Fark (+/-)", "Diff (+/-)");
+            dgvCompare.Columns["ColStatus"].HeaderText = T("Durum", "Status");
+
+            var allRows = AppHelper.BuildComparison(store, page1, page2);
+
+            // KPI Kartlarını güncelle
+            int incCount = allRows.Count(x => x.StatusCode == "increase");
+            int decCount = allRows.Count(x => x.StatusCode == "decrease");
+            int newCount = allRows.Count(x => x.StatusCode == "new");
+            int sameCount = allRows.Count(x => x.StatusCode == "same");
+            int netDiff = allRows.Sum(x => x.Diff);
+
+            compareKpiPanel.SuspendLayout();
+            foreach (Control c in compareKpiPanel.Controls) c.Dispose();
+            compareKpiPanel.Controls.Clear();
+            compareKpiPanel.Controls.Add(CreateCompareKpiChip(T("Toplam Ürün", "Total Items"), allRows.Count.ToString(), ColSurfaceAlt, ColTextDark));
+            compareKpiPanel.Controls.Add(CreateCompareKpiChip(T("Artış", "Increase"), incCount.ToString(), ColSuccessBg, ColSuccess));
+            compareKpiPanel.Controls.Add(CreateCompareKpiChip(T("Azalış", "Decrease"), decCount.ToString(), ColDangerBg, ColDanger));
+            compareKpiPanel.Controls.Add(CreateCompareKpiChip(T("Yeni Ürün", "New Item"), newCount.ToString(), ColSuccessBg, ColSuccess));
+            compareKpiPanel.Controls.Add(CreateCompareKpiChip(T("Sabit", "Unchanged"), sameCount.ToString(), ColSurfaceAlt, ColTextMuted));
+            compareKpiPanel.Controls.Add(CreateCompareKpiChip(
+                T("Net Fark", "Net Diff"),
+                netDiff > 0 ? "+" + netDiff : netDiff.ToString(),
+                netDiff > 0 ? ColSuccessBg : (netDiff < 0 ? ColDangerBg : ColSurfaceAlt),
+                netDiff > 0 ? ColSuccess : (netDiff < 0 ? ColDanger : ColTextDark)));
+            compareKpiPanel.ResumeLayout();
+
+            // Filtre uygula (Arama + Durum)
+            string q = (txtCompareSearch.Text ?? "").Trim().ToLowerInvariant();
+            string statusFilter = "all";
+            if (cmbCompareStatus.SelectedIndex == 1) statusFilter = "increase";
+            else if (cmbCompareStatus.SelectedIndex == 2) statusFilter = "decrease";
+            else if (cmbCompareStatus.SelectedIndex == 3) statusFilter = "new";
+            else if (cmbCompareStatus.SelectedIndex == 4) statusFilter = "same";
+
+            var filtered = allRows.Where(x =>
+                (statusFilter == "all" || x.StatusCode == statusFilter) &&
+                (string.IsNullOrEmpty(q) ||
+                 x.ProductName.ToLowerInvariant().Contains(q) ||
+                 L(x.ProductName).ToLowerInvariant().Contains(q))
+            ).ToList();
+
+            lastComparisonRows = filtered;
+
+            dgvCompare.Rows.Clear();
+            foreach (var item in filtered)
+            {
+                string diffText = item.Diff > 0 ? "+" + item.Diff : item.Diff.ToString();
+                string statusText = AppHelper.GetComparisonStatusLabel(item.StatusCode, IsEN);
+
+                int rowIdx = dgvCompare.Rows.Add(
+                    L(item.ProductName),
+                    item.Qty1,
+                    item.Qty2,
+                    diffText,
+                    statusText);
+
+                var row = dgvCompare.Rows[rowIdx];
+                row.Cells["ColProduct"].Style.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+                row.Cells["ColDiff"].Style.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+                row.Cells["ColStatus"].Style.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
+
+                if (item.Diff > 0)
+                {
+                    row.Cells["ColDiff"].Style.ForeColor = ColSuccess;
+                    row.Cells["ColDiff"].Style.BackColor = ColSuccessBg;
+                    row.Cells["ColDiff"].Style.SelectionForeColor = ColSuccess;
+                    row.Cells["ColDiff"].Style.SelectionBackColor = ColSuccessBg;
+
+                    row.Cells["ColStatus"].Style.ForeColor = ColSuccess;
+                    row.Cells["ColStatus"].Style.BackColor = ColSuccessBg;
+                    row.Cells["ColStatus"].Style.SelectionForeColor = ColSuccess;
+                    row.Cells["ColStatus"].Style.SelectionBackColor = ColSuccessBg;
+                }
+                else if (item.Diff < 0)
+                {
+                    row.Cells["ColDiff"].Style.ForeColor = ColDanger;
+                    row.Cells["ColDiff"].Style.BackColor = ColDangerBg;
+                    row.Cells["ColDiff"].Style.SelectionForeColor = ColDanger;
+                    row.Cells["ColDiff"].Style.SelectionBackColor = ColDangerBg;
+
+                    row.Cells["ColStatus"].Style.ForeColor = ColDanger;
+                    row.Cells["ColStatus"].Style.BackColor = ColDangerBg;
+                    row.Cells["ColStatus"].Style.SelectionForeColor = ColDanger;
+                    row.Cells["ColStatus"].Style.SelectionBackColor = ColDangerBg;
+                }
+                else
+                {
+                    row.Cells["ColDiff"].Style.ForeColor = ColTextMuted;
+                    row.Cells["ColStatus"].Style.ForeColor = ColTextMuted;
+                }
+            }
+            dgvCompare.ClearSelection();
+        }
+
+        private Panel CreateCompareKpiChip(string title, string value, Color bg, Color fg)
+        {
+            Panel p = new Panel
+            {
+                Size = new Size(150, 44),
+                BackColor = bg,
+                Margin = new Padding(4, 0, 6, 0)
+            };
+            p.Paint += (s, e) =>
+            {
+                using (Pen pen = new Pen(ColBorder, 1))
+                    e.Graphics.DrawRectangle(pen, 0, 0, p.Width - 1, p.Height - 1);
+            };
+
+            Label lblTitle = new Label
+            {
+                Text = title,
+                Font = new Font("Segoe UI", 8.2f, FontStyle.Bold),
+                ForeColor = ColTextMuted,
+                Location = new Point(10, 4),
+                AutoSize = true
+            };
+            Label lblVal = new Label
+            {
+                Text = value,
+                Font = new Font("Segoe UI", 12f, FontStyle.Bold),
+                ForeColor = fg,
+                Location = new Point(10, 19),
+                AutoSize = true
+            };
+            p.Controls.Add(lblTitle);
+            p.Controls.Add(lblVal);
+            return p;
+        }
+
+        private void ExportComparisonToExcel()
+        {
+            if (store.Pages.Count == 0) return;
+            var page1 = store.Pages.FirstOrDefault(p => p.Id == selectedComparePage1Id) ?? store.Pages[0];
+            var page2 = store.Pages.FirstOrDefault(p => p.Id == selectedComparePage2Id) ?? store.Pages[store.Pages.Count - 1];
+            string p1Name = AppHelper.GetPageDisplayName(page1, IsEN);
+            string p2Name = AppHelper.GetPageDisplayName(page2, IsEN);
+
+            using (SaveFileDialog sfd = new SaveFileDialog())
+            {
+                sfd.Title = T("Karşılaştırma Raporunu Excel Kaydet", "Save Comparison Report to Excel");
+                sfd.Filter = "Excel Workbook (*.xlsx)|*.xlsx";
+                sfd.FileName = $"Karsilastirma_{DateTime.Now:yyyy-MM-dd}.xlsx";
+
+                if (sfd.ShowDialog(this) == DialogResult.OK)
+                {
+                    try
+                    {
+                        ExcelHelper.ExportComparisonToXlsx(store, p1Name, p2Name, lastComparisonRows, sfd.FileName);
+                        MessageBox.Show(
+                            T("Karşılaştırma raporu Excel (.xlsx) olarak kaydedildi!", "Comparison report exported to Excel (.xlsx)!"),
+                            T("Tamam", "Done"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message, T("Hata", "Error"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
         }
 
         // =====================================================================
@@ -2749,7 +3991,10 @@ namespace EnvanterSayimApp
             {
                 AppHelper.ClearImageCache();
                 store.Rooms.Clear();
+                store.Pages.Clear();
                 store.Products.Clear();
+                store.ActivePageId = "";
+                AppHelper.EnsureCurrentMonthPage(store, null, true);
                 currentRoomId = null;
                 AppHelper.SaveStore(store);
                 RefreshAll();

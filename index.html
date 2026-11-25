@@ -132,21 +132,44 @@
       </div>
     </div>
 
+    <!-- AYLIK SAYFA YÖNETİM ÇUBUĞU (OTOMATİK AYLIK SAYFALAR + YENİ SAYFA EKLE) -->
+    <div class="border-t border-slate-100 dark:border-slate-700/70 bg-slate-100/70 dark:bg-slate-900/60">
+      <div class="max-w-5xl mx-auto px-3 sm:px-4 py-2 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-1.5 overflow-x-auto min-w-0 flex-1 pb-0.5" id="pagesPillsContainer"></div>
+        <div class="flex items-center gap-1 shrink-0">
+          <button onclick="openNewPageModal()" class="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg btn-primary text-[11px] sm:text-xs font-bold shadow-xs transition whitespace-nowrap">
+            <i data-lucide="file-plus-2" class="w-3.5 h-3.5"></i>
+            <span id="lblAddPageBtn">+ Yeni Sayfa Ekle</span>
+          </button>
+          <button onclick="openRenamePageModal()" id="btnRenamePageWeb" class="p-1.5 rounded-lg bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:opacity-80 transition" title="Sayfayı Yeniden Adlandır">
+            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+          </button>
+          <button onclick="deleteActivePage()" id="btnDeletePageWeb" class="p-1.5 rounded-lg bg-rose-500/15 text-rose-500 hover:bg-rose-500/25 transition" title="Sayfayı Sil">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- ANA NAVİGASYON SEKMELERİ -->
-    <div class="max-w-5xl mx-auto px-4 flex border-t border-slate-100 dark:border-slate-700/70 bg-slate-50/60 dark:bg-slate-800/80">
-      <button id="tab-rooms" onclick="switchTab('rooms')" class="flex-1 py-3 text-xs sm:text-sm font-bold border-b-2 flex items-center justify-center gap-1.5 transition">
-        <i data-lucide="door-open" class="w-4 h-4"></i>
-        <span id="lblTabRooms">Odalar</span>
-        <span id="badge-rooms" class="px-1.5 py-0.5 text-[11px] rounded-full badge-primary">0</span>
+    <div class="max-w-5xl mx-auto px-2 sm:px-4 flex border-t border-slate-100 dark:border-slate-700/70 bg-slate-50/60 dark:bg-slate-800/80">
+      <button id="tab-rooms" onclick="switchTab('rooms')" class="flex-1 py-3 text-[11px] sm:text-sm font-bold border-b-2 flex items-center justify-center gap-1 sm:gap-1.5 transition">
+        <i data-lucide="door-open" class="w-4 h-4 shrink-0"></i>
+        <span id="lblTabRooms" class="truncate">Odalar</span>
+        <span id="badge-rooms" class="px-1.5 py-0.5 text-[10px] sm:text-[11px] rounded-full badge-primary">0</span>
       </button>
-      <button id="tab-catalog" onclick="switchTab('catalog')" class="flex-1 py-3 text-xs sm:text-sm font-bold border-b-2 border-transparent text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1.5 transition">
-        <i data-lucide="package" class="w-4 h-4"></i>
-        <span id="lblTabCatalog">Ürün Havuzu</span>
-        <span id="badge-catalog" class="px-1.5 py-0.5 text-[11px] rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">0</span>
+      <button id="tab-catalog" onclick="switchTab('catalog')" class="flex-1 py-3 text-[11px] sm:text-sm font-bold border-b-2 border-transparent text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1 sm:gap-1.5 transition">
+        <i data-lucide="package" class="w-4 h-4 shrink-0"></i>
+        <span id="lblTabCatalog" class="truncate">Ürün Havuzu</span>
+        <span id="badge-catalog" class="px-1.5 py-0.5 text-[10px] sm:text-[11px] rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">0</span>
       </button>
-      <button id="tab-summary" onclick="switchTab('summary')" class="flex-1 py-3 text-xs sm:text-sm font-bold border-b-2 border-transparent text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1.5 transition">
-        <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
-        <span id="lblTabSummary">Genel Özet</span>
+      <button id="tab-summary" onclick="switchTab('summary')" class="flex-1 py-3 text-[11px] sm:text-sm font-bold border-b-2 border-transparent text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1 sm:gap-1.5 transition">
+        <i data-lucide="bar-chart-3" class="w-4 h-4 shrink-0"></i>
+        <span id="lblTabSummary" class="truncate">Genel Özet</span>
+      </button>
+      <button id="tab-compare" onclick="switchTab('compare')" class="flex-1 py-3 text-[11px] sm:text-sm font-bold border-b-2 border-transparent text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1 sm:gap-1.5 transition">
+        <i data-lucide="git-compare" class="w-4 h-4 shrink-0"></i>
+        <span id="lblTabCompare" class="truncate">Ayları Karşılaştır</span>
       </button>
     </div>
   </header>
@@ -300,6 +323,73 @@
       </div>
 
       <div id="summaryContainer"></div>
+    </section>
+
+    <!-- 5. GÖRÜNÜM: AYLARI KARŞILAŞTIR (ITEM BAZLI KARŞILAŞTIRMA MODÜLÜ) -->
+    <section id="view-compare" class="hidden space-y-4">
+      <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 id="lblCompareHeading" class="text-lg font-extrabold text-slate-900 dark:text-white">Ayları Karşılaştır</h2>
+            <p id="lblCompareSubheading" class="text-xs text-slate-500 dark:text-slate-400">İki farklı envanter sayfasındaki ürünleri yan yana eşleştirip farkları inceleyin.</p>
+          </div>
+          <button onclick="exportComparisonExcel()" class="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl btn-secondary text-xs font-bold shadow-xs transition shrink-0">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+            <span id="lblExportCompareBtn">Karşılaştırmayı Excel İndir</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-11 gap-2 items-end">
+          <div class="sm:col-span-5">
+            <label id="lblComparePage1" class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">1. Seçilen Ay / Sayfa</label>
+            <select id="comparePage1Select" onchange="onCompareSelectionChange()" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-xl text-sm font-bold focus:outline-none"></select>
+          </div>
+          <div class="sm:col-span-1 flex justify-center">
+            <button type="button" onclick="swapComparePages()" class="w-full sm:w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-800 dark:text-white font-extrabold text-base flex items-center justify-center hover:opacity-80 transition" title="Yer Değiştir">⇄</button>
+          </div>
+          <div class="sm:col-span-5">
+            <label id="lblComparePage2" class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">2. Seçilen Ay / Sayfa</label>
+            <select id="comparePage2Select" onchange="onCompareSelectionChange()" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-xl text-sm font-bold focus:outline-none"></select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+          <div class="relative sm:col-span-8">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+            <input id="compareSearchInput" type="text" oninput="renderComparisonTable()" placeholder="Karşılaştırmada ürün ara..." class="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-sm focus:outline-none" />
+          </div>
+          <div class="sm:col-span-4">
+            <select id="compareStatusFilter" onchange="renderComparisonTable()" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-sm font-bold focus:outline-none"></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tek sayfa uyarısı -->
+      <div id="compareSinglePageNotice" class="hidden p-3.5 rounded-xl badge-primary border text-xs sm:text-sm font-bold flex flex-wrap items-center justify-between gap-2">
+        <span id="lblCompareNoticeText">Karşılaştırma için en az 2 sayfa gerekir. "+ Yeni Sayfa Ekle" ile yeni bir dönem oluşturabilirsiniz.</span>
+        <button onclick="openNewPageModal()" class="px-3 py-1.5 rounded-lg btn-primary text-xs font-bold">+ Yeni Sayfa Ekle</button>
+      </div>
+
+      <!-- KPI Özeti -->
+      <div id="compareKpiGrid" class="grid grid-cols-2 sm:grid-cols-5 gap-2.5"></div>
+
+      <!-- Karşılaştırma Tablosu -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse text-left">
+            <thead>
+              <tr class="bg-slate-100 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-700 text-xs font-extrabold text-slate-700 dark:text-slate-200">
+                <th id="thCompareProduct" class="py-3 px-4">Ürün Adı</th>
+                <th id="thCompareQty1" class="py-3 px-3 text-center">1. Ay Miktarı</th>
+                <th id="thCompareQty2" class="py-3 px-3 text-center">2. Ay Miktarı</th>
+                <th id="thCompareDiff" class="py-3 px-3 text-center">Fark (+/-)</th>
+                <th id="thCompareStatus" class="py-3 px-4 text-center">Durum</th>
+              </tr>
+            </thead>
+            <tbody id="compareTableBody" class="divide-y divide-slate-200 dark:divide-slate-700 text-xs sm:text-sm"></tbody>
+          </table>
+        </div>
+      </div>
     </section>
 
   </main>
@@ -611,6 +701,43 @@
     </div>
   </div>
 
+  <!-- MODAL: YENİ ENVANTER SAYFASI EKLE / DÜZENLE -->
+  <div id="pageModal" onclick="closePageModal()" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4">
+    <div onclick="event.stopPropagation()" class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 id="pageModalTitle" class="text-lg font-bold text-slate-900 dark:text-white">Yeni Envanter Sayfası Ekle</h3>
+        <button onclick="closePageModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form onsubmit="savePageModalForm(event)" class="space-y-4">
+        <div>
+          <label id="lblPageNameField" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Sayfa Adı *</label>
+          <input id="pageNameInput" type="text" required placeholder="Örn: Aralık 2026 Envanteri, Yıl Sonu..." class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white rounded-xl text-sm focus:outline-none" />
+        </div>
+        <div id="pageCopyModeWrap" class="space-y-2">
+          <label id="lblPageCopyMode" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">Başlangıç İçeriği</label>
+          <label class="flex items-center gap-2.5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-700 cursor-pointer text-xs sm:text-sm">
+            <input type="radio" name="pageCopyMode" value="copy_with_qty" checked class="accent-current" />
+            <span id="lblCopyWithQty">Mevcut sayfadaki odaları ve miktarları kopyala</span>
+          </label>
+          <label class="flex items-center gap-2.5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-700 cursor-pointer text-xs sm:text-sm">
+            <input type="radio" name="pageCopyMode" value="copy_zero_qty" class="accent-current" />
+            <span id="lblCopyZeroQty">Odaları ve ürünleri kopyala, miktarları 0 başlat</span>
+          </label>
+          <label class="flex items-center gap-2.5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-700 cursor-pointer text-xs sm:text-sm">
+            <input type="radio" name="pageCopyMode" value="empty" class="accent-current" />
+            <span id="lblCopyEmpty">Tamamen boş sayfa oluştur</span>
+          </label>
+        </div>
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button" onclick="closePageModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-semibold lblCancelBtn">İptal</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl btn-primary text-sm font-bold shadow-sm lblSaveBtn">Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- MODAL: LAPTOPLAR İÇİN AYRI EXCEL İŞLEMLERİ -->
   <div id="laptopExcelModal" onclick="closeLaptopExcelModal()" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4">
     <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4" onclick="event.stopPropagation()">
@@ -743,13 +870,19 @@
       colorTheme: 0,  // 0, 1, 2, 3
       viewMode: 'list',
       activeTab: 'rooms',
+      activePageId: '',
       currentRoomId: 'r_inventory',
+      pages: [],
       rooms: [],
       products: []
     };
 
     let editingRoomId = null;
     let editingProductId = null;
+    let editingPageId = null;
+    let selectedComparePage1Id = '';
+    let selectedComparePage2Id = '';
+    let lastComparisonRows = [];
     let activeSerialRoomId = null;
     let activeSerialProductId = null;
     let editingSerialRowId = null;
@@ -813,6 +946,242 @@
       document.getElementById('pwaInstallBtn').classList.add('hidden');
     }
 
+    const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+    const EN_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+    function getDefaultMonthlyPageName(dateObj, en = false) {
+      const m = dateObj.getMonth();
+      const y = dateObj.getFullYear();
+      return en ? `${EN_MONTHS[m]} ${y} Inventory` : `${TR_MONTHS[m]} ${y} Envanteri`;
+    }
+
+    function getPageDisplayName(page) {
+      if (!page) return '';
+      if (page.monthKey && /^\d{4}-\d{2}$/.test(page.monthKey)) {
+        const y = parseInt(page.monthKey.slice(0, 4), 10);
+        const m = parseInt(page.monthKey.slice(5, 7), 10) - 1;
+        if (m >= 0 && m < 12) {
+          const autoTr = `${TR_MONTHS[m]} ${y} Envanteri`;
+          const autoEn = `${EN_MONTHS[m]} ${y} Inventory`;
+          const cur = String(page.name || '').trim();
+          if (!cur || cur.toLowerCase() === autoTr.toLowerCase() || cur.toLowerCase() === autoEn.toLowerCase()) {
+            return isEN() ? autoEn : autoTr;
+          }
+        }
+      }
+      return page.name || '';
+    }
+
+    function cloneRoomsList(rooms, zeroQuantities = false) {
+      if (!Array.isArray(rooms)) return [];
+      return rooms.map(r => {
+        const newItems = {};
+        const newSerials = {};
+        const newNameSnap = { ...(r.itemNames || {}) };
+        Object.keys(r.items || {}).forEach(pid => {
+          newItems[pid] = zeroQuantities ? 0 : (Number(r.items[pid]) || 0);
+          const prod = state.products.find(p => p.id === pid);
+          if (prod) newNameSnap[pid] = prod.name;
+          if (!zeroQuantities && r.serials && Array.isArray(r.serials[pid])) {
+            newSerials[pid] = r.serials[pid].map(sr => ({ ...sr }));
+          } else {
+            newSerials[pid] = [];
+          }
+        });
+        return {
+          id: r.id,
+          name: r.name,
+          note: r.note || '',
+          items: newItems,
+          serials: newSerials,
+          itemNames: newNameSnap
+        };
+      });
+    }
+
+    function syncProductNameSnapshots() {
+      const pMap = {};
+      (state.products || []).forEach(p => { pMap[p.id] = p.name; });
+      const applyRooms = (rooms) => {
+        (rooms || []).forEach(r => {
+          if (!r.itemNames) r.itemNames = {};
+          Object.keys(r.items || {}).forEach(pid => {
+            if (pMap[pid]) r.itemNames[pid] = pMap[pid];
+          });
+        });
+      };
+      applyRooms(state.rooms);
+      (state.pages || []).forEach(pg => applyRooms(pg.rooms));
+    }
+
+    function syncActivePageRooms() {
+      if (!Array.isArray(state.pages)) state.pages = [];
+      if (!Array.isArray(state.rooms)) state.rooms = [];
+      const active = state.pages.find(p => p.id === state.activePageId);
+      if (active) {
+        active.rooms = state.rooms;
+      }
+      syncProductNameSnapshots();
+    }
+
+    function ensureCurrentMonthPage(activateCurrentMonth = true, nowOverride = null) {
+      if (!Array.isArray(state.pages)) state.pages = [];
+      if (!Array.isArray(state.rooms)) state.rooms = [];
+
+      const now = nowOverride || new Date();
+      const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const defaultTrName = getDefaultMonthlyPageName(now, false);
+
+      // Eski veriden geçiş: henüz sayfa yoksa mevcut odaları içinde bulunulan ayın sayfasına taşı
+      if (state.pages.length === 0) {
+        const migrated = {
+          id: 'page_' + monthKey.replace('-', '_'),
+          name: defaultTrName,
+          monthKey,
+          createdAt: now.toISOString(),
+          rooms: cloneRoomsList(state.rooms, false)
+        };
+        state.pages.push(migrated);
+        state.activePageId = migrated.id;
+        state.rooms = migrated.rooms;
+        syncProductNameSnapshots();
+        return migrated;
+      }
+
+      // İçinde bulunulan aya ait sayfa var mı? Yoksa önceki ayları silmeden otomatik oluştur
+      let currentMonthPage = state.pages.find(p => p.monthKey === monthKey);
+      if (!currentMonthPage) {
+        const latest = state.pages[state.pages.length - 1];
+        currentMonthPage = {
+          id: 'page_' + monthKey.replace('-', '_'),
+          name: defaultTrName,
+          monthKey,
+          createdAt: now.toISOString(),
+          rooms: cloneRoomsList(latest ? latest.rooms : state.rooms, false)
+        };
+        state.pages.push(currentMonthPage);
+      }
+
+      const target = activateCurrentMonth
+        ? currentMonthPage
+        : (state.pages.find(p => p.id === state.activePageId) || currentMonthPage);
+
+      if (!Array.isArray(target.rooms)) target.rooms = [];
+      state.activePageId = target.id;
+      state.rooms = target.rooms;
+      syncProductNameSnapshots();
+      return target;
+    }
+
+    async function switchInventoryPage(pageId) {
+      if (state.activePageId === pageId) return;
+      syncActivePageRooms();
+      const target = state.pages.find(p => p.id === pageId);
+      if (!target) return;
+      if (!Array.isArray(target.rooms)) target.rooms = [];
+      state.activePageId = target.id;
+      state.rooms = target.rooms;
+      state.currentRoomId = state.rooms[0]?.id || null;
+      await saveState();
+      renderAll();
+    }
+
+    function openNewPageModal() {
+      editingPageId = null;
+      document.getElementById('pageModalTitle').textContent = T('Yeni Envanter Sayfası Ekle', 'Add New Inventory Page');
+      document.getElementById('pageNameInput').value = '';
+      document.getElementById('pageCopyModeWrap').classList.remove('hidden');
+      const firstRadio = document.querySelector('input[name="pageCopyMode"][value="copy_with_qty"]');
+      if (firstRadio) firstRadio.checked = true;
+      document.getElementById('pageModal').classList.remove('hidden');
+      lucide.createIcons();
+      setTimeout(() => document.getElementById('pageNameInput').focus(), 50);
+    }
+
+    function openRenamePageModal() {
+      const active = state.pages.find(p => p.id === state.activePageId);
+      if (!active) return;
+      editingPageId = active.id;
+      document.getElementById('pageModalTitle').textContent = T('Sayfa Adını Düzenle', 'Rename Page');
+      document.getElementById('pageNameInput').value = getPageDisplayName(active);
+      document.getElementById('pageCopyModeWrap').classList.add('hidden');
+      document.getElementById('pageModal').classList.remove('hidden');
+      lucide.createIcons();
+      setTimeout(() => document.getElementById('pageNameInput').focus(), 50);
+    }
+
+    function closePageModal() {
+      document.getElementById('pageModal').classList.add('hidden');
+      editingPageId = null;
+    }
+
+    async function savePageModalForm(e) {
+      e.preventDefault();
+      const name = (document.getElementById('pageNameInput').value || '').trim();
+      if (!name) return;
+
+      if (editingPageId) {
+        const pg = state.pages.find(p => p.id === editingPageId);
+        if (pg) pg.name = name;
+      } else {
+        syncActivePageRooms();
+        const mode = document.querySelector('input[name="pageCopyMode"]:checked')?.value || 'copy_with_qty';
+        let newRooms = [];
+        if (mode === 'copy_with_qty') newRooms = cloneRoomsList(state.rooms, false);
+        else if (mode === 'copy_zero_qty') newRooms = cloneRoomsList(state.rooms, true);
+
+        const created = {
+          id: 'page_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          name,
+          monthKey: '',
+          createdAt: new Date().toISOString(),
+          rooms: newRooms
+        };
+        state.pages.push(created);
+        state.activePageId = created.id;
+        state.rooms = created.rooms;
+        state.currentRoomId = state.rooms[0]?.id || null;
+      }
+
+      closePageModal();
+      await saveState();
+      renderAll();
+      showToast(editingPageId ? T('Sayfa adı güncellendi', 'Page renamed') : T(`"${name}" sayfası oluşturuldu`, `Page "${name}" created`), 'success');
+    }
+
+    async function deleteActivePage() {
+      if (state.pages.length <= 1) return;
+      const active = state.pages.find(p => p.id === state.activePageId);
+      if (!active) return;
+      const disp = getPageDisplayName(active);
+      if (!confirm(T(`"${disp}" sayfasını silmek istediğinize emin misiniz?`, `Delete page "${disp}"?`))) return;
+
+      state.pages = state.pages.filter(p => p.id !== active.id);
+      const next = state.pages[state.pages.length - 1];
+      state.activePageId = next.id;
+      state.rooms = next.rooms;
+      state.currentRoomId = state.rooms[0]?.id || null;
+      await saveState();
+      renderAll();
+    }
+
+    function renderPagesBar() {
+      const container = document.getElementById('pagesPillsContainer');
+      if (!container) return;
+      container.innerHTML = state.pages.map(pg => {
+        const active = pg.id === state.activePageId;
+        const disp = getPageDisplayName(pg);
+        return `
+          <button type="button" onclick="switchInventoryPage('${pg.id}')" class="px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold whitespace-nowrap transition shrink-0 flex items-center gap-1.5 ${active ? 'btn-primary shadow-xs' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:opacity-85'}">
+            ${active ? '<span class="w-1.5 h-1.5 rounded-full bg-current"></span>' : ''}
+            <span>${escapeHtml(disp)}</span>
+          </button>
+        `;
+      }).join('');
+      const delBtn = document.getElementById('btnDeletePageWeb');
+      if (delBtn) delBtn.classList.toggle('hidden', state.pages.length <= 1);
+    }
+
     function applyInitialSeedData() {
       if (window.INITIAL_INVENTORY_SEED) {
         const cloned = JSON.parse(JSON.stringify(window.INITIAL_INVENTORY_SEED));
@@ -821,6 +1190,9 @@
           ...r,
           serials: r.serials || {}
         }));
+        state.pages = [];
+        state.activePageId = '';
+        ensureCurrentMonthPage(true);
         state.currentRoomId = state.rooms[0]?.id || null;
       }
     }
@@ -848,6 +1220,7 @@
     }
 
     async function saveState() {
+      syncActivePageRooms();
       try {
         const db = await openDB();
         await new Promise((resolve, reject) => {
@@ -873,7 +1246,7 @@
           req.onsuccess = () => resolve(req.result);
           req.onerror = () => reject(req.error);
         });
-        if (loaded && Array.isArray(loaded.rooms) && Array.isArray(loaded.products) && (loaded.rooms.length > 0 || loaded.products.length > 0)) {
+        if (loaded && Array.isArray(loaded.products) && ((loaded.rooms && loaded.rooms.length > 0) || (loaded.pages && loaded.pages.length > 0) || loaded.products.length > 0)) {
           state = { ...state, ...loaded };
           return true;
         }
@@ -881,7 +1254,7 @@
         const raw = localStorage.getItem(STATE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed && (parsed.rooms?.length > 0 || parsed.products?.length > 0)) {
+          if (parsed && (parsed.rooms?.length > 0 || parsed.pages?.length > 0 || parsed.products?.length > 0)) {
             state = { ...state, ...parsed };
             return true;
           }
@@ -935,9 +1308,25 @@
       document.getElementById('lblExcelMergeBtn').textContent = T('Mevcut Odalarla Birleştir / Güncelle', 'Merge / Update Existing Rooms');
       document.getElementById('lblExcelReplaceBtn').textContent = T("Odaları Temizle & Sadece Excel'i Yükle", 'Clear Rooms & Load Only Excel');
 
+      document.getElementById('lblAddPageBtn').textContent = T('+ Yeni Sayfa Ekle', '+ Add New Page');
       document.getElementById('lblTabRooms').textContent = T('Odalar', 'Rooms');
       document.getElementById('lblTabCatalog').textContent = T('Ürün Havuzu', 'Product Pool');
       document.getElementById('lblTabSummary').textContent = T('Genel Özet', 'Summary');
+      document.getElementById('lblTabCompare').textContent = T('Ayları Karşılaştır', 'Compare Months');
+
+      document.getElementById('lblCompareHeading').textContent = T('Ayları Karşılaştır (Item Bazlı)', 'Compare Months (Item-Based)');
+      document.getElementById('lblCompareSubheading').textContent = T('İki farklı envanter sayfasındaki ürünleri yan yana eşleştirip farkları inceleyin.', 'Match items across two inventory pages side by side and inspect differences.');
+      document.getElementById('lblExportCompareBtn').textContent = T('Karşılaştırmayı Excel İndir', 'Export Comparison Excel');
+      document.getElementById('lblComparePage1').textContent = T('1. Seçilen Ay / Sayfa', '1st Selected Month / Page');
+      document.getElementById('lblComparePage2').textContent = T('2. Seçilen Ay / Sayfa', '2nd Selected Month / Page');
+      document.getElementById('compareSearchInput').placeholder = T('Karşılaştırmada ürün ara...', 'Search item in comparison...');
+      document.getElementById('lblCompareNoticeText').textContent = T('Karşılaştırma için en az 2 sayfa gerekir. "+ Yeni Sayfa Ekle" ile yeni bir dönem oluşturabilirsiniz.', 'At least 2 pages are needed to compare. Click "+ Add New Page" to create another period.');
+      document.getElementById('lblPageNameField').textContent = T('Sayfa Adı *', 'Page Name *');
+      document.getElementById('pageNameInput').placeholder = T('Örn: Aralık 2026 Envanteri, Yıl Sonu...', 'e.g. December 2026 Inventory, Year-End...');
+      document.getElementById('lblPageCopyMode').textContent = T('Başlangıç İçeriği', 'Initial Content');
+      document.getElementById('lblCopyWithQty').textContent = T('Mevcut sayfadaki odaları ve miktarları kopyala', 'Copy rooms & quantities from current page');
+      document.getElementById('lblCopyZeroQty').textContent = T('Odaları ve ürünleri kopyala, miktarları 0 başlat', 'Copy rooms & items, start quantities at 0');
+      document.getElementById('lblCopyEmpty').textContent = T('Tamamen boş sayfa oluştur', 'Create a completely empty page');
 
       document.getElementById('lblRoomsHeading').textContent = T('Odalar ve Bölgeler', 'Rooms & Locations');
       document.getElementById('lblRoomsSubheading').textContent = T('Sayım yapmak istediğiniz odaya dokunun veya yeni oda ekleyin.', 'Tap a room to count inventory or add a new room.');
@@ -1128,12 +1517,13 @@
     }
 
     function updateTabStyles() {
-      ['rooms', 'catalog', 'summary'].forEach(t => {
+      ['rooms', 'catalog', 'summary', 'compare'].forEach(t => {
         const btn = document.getElementById(`tab-${t}`);
+        if (!btn) return;
         if (t === state.activeTab) {
-          btn.className = 'flex-1 py-3 text-xs sm:text-sm font-bold border-b-2 border-theme-primary text-theme-primary flex items-center justify-center gap-1.5 transition';
+          btn.className = 'flex-1 py-3 text-[11px] sm:text-sm font-bold border-b-2 border-theme-primary text-theme-primary flex items-center justify-center gap-1 sm:gap-1.5 transition';
         } else {
-          btn.className = 'flex-1 py-3 text-xs sm:text-sm font-bold border-b-2 border-transparent text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1.5 transition';
+          btn.className = 'flex-1 py-3 text-[11px] sm:text-sm font-bold border-b-2 border-transparent text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1 sm:gap-1.5 transition';
         }
       });
     }
@@ -1144,7 +1534,9 @@
     }
 
     function renderAll() {
+      ensureCurrentMonthPage(false);
       applyThemeAndLanguage();
+      renderPagesBar();
       updateTabStyles();
       updateHeaderBadges();
       updateViewToggleButtons();
@@ -1153,17 +1545,20 @@
       const viewRoomDetail = document.getElementById('view-room-detail');
       const viewCatalog = document.getElementById('view-catalog');
       const viewSummary = document.getElementById('view-summary');
+      const viewCompare = document.getElementById('view-compare');
 
       viewRooms.classList.add('hidden');
       viewRoomDetail.classList.add('hidden');
       viewCatalog.classList.add('hidden');
       viewSummary.classList.add('hidden');
+      viewCompare.classList.add('hidden');
 
       if (state.activeTab === 'rooms') {
-        if (state.currentRoomId) {
+        if (state.currentRoomId && state.rooms.some(r => r.id === state.currentRoomId)) {
           viewRoomDetail.classList.remove('hidden');
           renderRoomDetail();
         } else {
+          state.currentRoomId = null;
           viewRooms.classList.remove('hidden');
           renderRoomsList();
         }
@@ -1173,9 +1568,244 @@
       } else if (state.activeTab === 'summary') {
         viewSummary.classList.remove('hidden');
         renderSummary();
+      } else if (state.activeTab === 'compare') {
+        viewCompare.classList.remove('hidden');
+        renderComparisonView();
       }
 
       lucide.createIcons();
+    }
+
+    // =========================================================================
+    // ITEM BAZLI AYLIK KARŞILAŞTIRMA MODÜLÜ
+    // =========================================================================
+    function getComparisonStatusLabel(code) {
+      if (code === 'new') return T('Yeni Ürün', 'New Item');
+      if (code === 'increase') return T('Artış', 'Increase');
+      if (code === 'decrease') return T('Azalış', 'Decrease');
+      return T('Sabit', 'Unchanged');
+    }
+
+    function buildComparisonRows(page1, page2) {
+      const map = new Map();
+      const prodLookup = {};
+      state.products.forEach(p => { prodLookup[p.id] = p; });
+
+      const accumulate = (pg, isFirst) => {
+        if (!pg || !Array.isArray(pg.rooms)) return;
+        pg.rooms.forEach(room => {
+          const itemsObj = room.items || {};
+          Object.keys(itemsObj).forEach(pid => {
+            const prod = prodLookup[pid];
+            const name = prod ? prod.name : ((room.itemNames && room.itemNames[pid]) || pid);
+            if (!name) return;
+            const key = toEnglishName(name).toLowerCase() || pid.toLowerCase();
+            if (!map.has(key)) {
+              map.set(key, {
+                key,
+                productId: prod ? prod.id : pid,
+                productName: name,
+                photo: prod ? prod.photo : null,
+                qty1: 0,
+                qty2: 0
+              });
+            }
+            const rec = map.get(key);
+            const qty = Math.max(0, Number(itemsObj[pid]) || 0);
+            if (isFirst) rec.qty1 += qty;
+            else rec.qty2 += qty;
+          });
+        });
+      };
+
+      accumulate(page1, true);
+      accumulate(page2, false);
+
+      const weight = { new: 0, increase: 1, decrease: 2, same: 3 };
+      return [...map.values()]
+        .map(row => {
+          const diff = row.qty2 - row.qty1;
+          let statusCode = 'same';
+          if (row.qty1 === 0 && row.qty2 > 0) statusCode = 'new';
+          else if (row.qty2 > row.qty1) statusCode = 'increase';
+          else if (row.qty2 < row.qty1) statusCode = 'decrease';
+          return { ...row, diff, statusCode };
+        })
+        .sort((a, b) => (weight[a.statusCode] - weight[b.statusCode]) || a.productName.localeCompare(b.productName));
+    }
+
+    function renderComparisonView() {
+      syncActivePageRooms();
+      const sel1 = document.getElementById('comparePage1Select');
+      const sel2 = document.getElementById('comparePage2Select');
+      const stSel = document.getElementById('compareStatusFilter');
+
+      if (!selectedComparePage2Id || !state.pages.some(p => p.id === selectedComparePage2Id)) {
+        selectedComparePage2Id = state.activePageId;
+      }
+      if (!selectedComparePage1Id || !state.pages.some(p => p.id === selectedComparePage1Id)) {
+        const other = [...state.pages].reverse().find(p => p.id !== selectedComparePage2Id);
+        selectedComparePage1Id = other ? other.id : (state.pages[0]?.id || '');
+      }
+
+      const optsHtml = state.pages.map(p => `<option value="${p.id}">${escapeHtml(getPageDisplayName(p))}</option>`).join('');
+      sel1.innerHTML = optsHtml;
+      sel2.innerHTML = optsHtml;
+      sel1.value = selectedComparePage1Id;
+      sel2.value = selectedComparePage2Id;
+
+      const prevSt = stSel.value || 'all';
+      stSel.innerHTML = `
+        <option value="all">${T('Durum: Tümü', 'Status: All')}</option>
+        <option value="increase">${T('Artış', 'Increase')}</option>
+        <option value="decrease">${T('Azalış', 'Decrease')}</option>
+        <option value="new">${T('Yeni Ürün', 'New Item')}</option>
+        <option value="same">${T('Sabit', 'Unchanged')}</option>
+      `;
+      stSel.value = ['all', 'increase', 'decrease', 'new', 'same'].includes(prevSt) ? prevSt : 'all';
+
+      document.getElementById('compareSinglePageNotice').classList.toggle('hidden', state.pages.length >= 2);
+      renderComparisonTable();
+    }
+
+    function onCompareSelectionChange() {
+      selectedComparePage1Id = document.getElementById('comparePage1Select').value;
+      selectedComparePage2Id = document.getElementById('comparePage2Select').value;
+      renderComparisonTable();
+    }
+
+    function swapComparePages() {
+      const tmp = selectedComparePage1Id;
+      selectedComparePage1Id = selectedComparePage2Id;
+      selectedComparePage2Id = tmp;
+      renderComparisonView();
+    }
+
+    function renderComparisonTable() {
+      const page1 = state.pages.find(p => p.id === selectedComparePage1Id) || state.pages[0];
+      const page2 = state.pages.find(p => p.id === selectedComparePage2Id) || state.pages[state.pages.length - 1];
+      if (!page1 || !page2) return;
+
+      const p1Name = getPageDisplayName(page1);
+      const p2Name = getPageDisplayName(page2);
+
+      document.getElementById('thCompareProduct').textContent = T('Ürün Adı', 'Product Name');
+      document.getElementById('thCompareQty1').textContent = isEN() ? `${p1Name} Qty` : `${p1Name} Miktarı`;
+      document.getElementById('thCompareQty2').textContent = isEN() ? `${p2Name} Qty` : `${p2Name} Miktarı`;
+      document.getElementById('thCompareDiff').textContent = T('Fark (+/-)', 'Diff (+/-)');
+      document.getElementById('thCompareStatus').textContent = T('Durum', 'Status');
+
+      const allRows = buildComparisonRows(page1, page2);
+
+      const incCount = allRows.filter(x => x.statusCode === 'increase').length;
+      const decCount = allRows.filter(x => x.statusCode === 'decrease').length;
+      const newCount = allRows.filter(x => x.statusCode === 'new').length;
+      const sameCount = allRows.filter(x => x.statusCode === 'same').length;
+      const netDiff = allRows.reduce((acc, x) => acc + x.diff, 0);
+
+      document.getElementById('compareKpiGrid').innerHTML = `
+        <div class="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200 dark:border-slate-700">
+          <span class="text-[11px] text-slate-500 dark:text-slate-400 font-bold">${T('Toplam Ürün', 'Total Items')}</span>
+          <p class="text-xl font-extrabold text-slate-900 dark:text-white mt-0.5">${allRows.length}</p>
+        </div>
+        <div class="bg-emerald-500/10 p-3 rounded-2xl border border-emerald-500/30">
+          <span class="text-[11px] text-emerald-700 dark:text-emerald-300 font-bold">${T('Artış', 'Increase')}</span>
+          <p class="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">${incCount}</p>
+        </div>
+        <div class="bg-rose-500/10 p-3 rounded-2xl border border-rose-500/30">
+          <span class="text-[11px] text-rose-700 dark:text-rose-300 font-bold">${T('Azalış', 'Decrease')}</span>
+          <p class="text-xl font-extrabold text-rose-600 dark:text-rose-400 mt-0.5">${decCount}</p>
+        </div>
+        <div class="bg-emerald-500/10 p-3 rounded-2xl border border-emerald-500/30">
+          <span class="text-[11px] text-emerald-700 dark:text-emerald-300 font-bold">${T('Yeni Ürün', 'New Item')}</span>
+          <p class="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">${newCount}</p>
+        </div>
+        <div class="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 col-span-2 sm:col-span-1">
+          <span class="text-[11px] text-slate-500 dark:text-slate-400 font-bold">${T('Sabit / Net Fark', 'Same / Net Diff')}</span>
+          <p class="text-xl font-extrabold mt-0.5 ${netDiff > 0 ? 'text-emerald-600 dark:text-emerald-400' : (netDiff < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-600 dark:text-slate-300')}">${sameCount} / ${netDiff > 0 ? '+' + netDiff : netDiff}</p>
+        </div>
+      `;
+
+      const q = (document.getElementById('compareSearchInput')?.value || '').trim().toLowerCase();
+      const statusFilter = document.getElementById('compareStatusFilter')?.value || 'all';
+      const filtered = allRows.filter(x =>
+        (statusFilter === 'all' || x.statusCode === statusFilter) &&
+        (!q || x.productName.toLowerCase().includes(q) || L(x.productName).toLowerCase().includes(q))
+      );
+
+      lastComparisonRows = filtered;
+      const tbody = document.getElementById('compareTableBody');
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400 text-xs sm:text-sm">${T('Gösterilecek ürün bulunamadı.', 'No matching items found.')}</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(item => {
+        const diffText = item.diff > 0 ? `+${item.diff}` : String(item.diff);
+        const statusLabel = getComparisonStatusLabel(item.statusCode);
+        const diffCls = item.diff > 0
+          ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-extrabold'
+          : (item.diff < 0
+            ? 'text-rose-600 dark:text-rose-400 bg-rose-500/10 font-extrabold'
+            : 'text-slate-500 dark:text-slate-400 font-bold');
+        const badgeCls = item.diff > 0
+          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+          : (item.diff < 0
+            ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30'
+            : 'bg-slate-200/70 dark:bg-slate-700 text-slate-600 dark:text-slate-300');
+
+        return `
+          <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-700/30 transition">
+            <td class="py-3 px-4 font-bold text-slate-900 dark:text-white">
+              <div class="flex items-center gap-2.5">
+                ${item.photo ? `<img src="${item.photo}" class="w-8 h-8 rounded-lg object-contain bg-white border border-slate-200 p-0.5 shrink-0" />` : ''}
+                <span>${escapeHtml(L(item.productName))}</span>
+              </div>
+            </td>
+            <td class="py-3 px-3 text-center font-mono font-bold text-slate-700 dark:text-slate-200">${item.qty1}</td>
+            <td class="py-3 px-3 text-center font-mono font-bold text-slate-700 dark:text-slate-200">${item.qty2}</td>
+            <td class="py-3 px-3 text-center font-mono ${diffCls}">${diffText}</td>
+            <td class="py-3 px-4 text-center">
+              <span class="inline-block px-2.5 py-1 rounded-full text-[11px] font-extrabold ${badgeCls}">${escapeHtml(statusLabel)}</span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function exportComparisonExcel() {
+      const page1 = state.pages.find(p => p.id === selectedComparePage1Id) || state.pages[0];
+      const page2 = state.pages.find(p => p.id === selectedComparePage2Id) || state.pages[state.pages.length - 1];
+      if (!page1 || !page2) return;
+      const p1Name = getPageDisplayName(page1);
+      const p2Name = getPageDisplayName(page2);
+      const dateStr = new Date().toISOString().slice(0, 10);
+
+      const rows = [
+        [T('Ürün Adı', 'Product Name'), isEN() ? `${p1Name} Qty` : `${p1Name} Miktarı`, isEN() ? `${p2Name} Qty` : `${p2Name} Miktarı`, T('Fark (+/-)', 'Diff (+/-)'), T('Durum', 'Status')],
+        ...lastComparisonRows.map(it => [
+          L(it.productName),
+          it.qty1,
+          it.qty2,
+          it.diff > 0 ? `+${it.diff}` : String(it.diff),
+          getComparisonStatusLabel(it.statusCode)
+        ])
+      ];
+
+      if (window.XLSX) {
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        ws['!cols'] = [{ wch: 30 }, { wch: 24 }, { wch: 24 }, { wch: 14 }, { wch: 16 }];
+        XLSX.utils.book_append_sheet(wb, ws, T('Karsilastirma', 'Comparison'));
+        const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        await downloadOrShareFile(blob, `Karsilastirma_${dateStr}.xlsx`);
+        showToast(T('Karşılaştırma Excel (.xlsx) indirildi', 'Comparison Excel (.xlsx) exported'), 'success');
+      } else {
+        const csv = '\uFEFF' + rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
+        await downloadOrShareFile(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `Karsilastirma_${dateStr}.csv`);
+      }
     }
 
     // 1. ODALAR LİSTESİ
@@ -2729,12 +3359,59 @@
       );
     }
 
+    function serializeRoomsXml(rooms, indent) {
+      let xml = '';
+      (rooms || []).forEach(r => {
+        xml += `${indent}<RoomData>\n${indent}  <Id>${escapeHtml(r.id)}</Id>\n${indent}  <Name>${escapeHtml(r.name)}</Name>\n${indent}  <Note>${escapeHtml(r.note || '')}</Note>\n${indent}  <Items>\n`;
+        Object.keys(r.items || {}).forEach(pid => {
+          const serials = getRoomProductSerials(r, pid);
+          const prod = state.products.find(p => p.id === pid);
+          const pName = prod ? prod.name : ((r.itemNames && r.itemNames[pid]) || '');
+          xml += `${indent}    <RoomProductEntry>\n${indent}      <ProductId>${escapeHtml(pid)}</ProductId>\n${indent}      <ProductName>${escapeHtml(pName)}</ProductName>\n${indent}      <Quantity>${Number(r.items[pid]) || 0}</Quantity>\n${indent}      <Serials>\n`;
+          serials.forEach(sr => {
+            xml += `${indent}        <SerialRecord>\n${indent}          <Id>${escapeHtml(sr.id)}</Id>\n${indent}          <SerialNo>${escapeHtml(sr.serialNo)}</SerialNo>\n${indent}          <Status>${escapeHtml(sr.status)}</Status>\n${indent}        </SerialRecord>\n`;
+          });
+          xml += `${indent}      </Serials>\n${indent}    </RoomProductEntry>\n`;
+        });
+        xml += `${indent}  </Items>\n${indent}</RoomData>\n`;
+      });
+      return xml;
+    }
+
+    function parseRoomNodesXml(parentEl) {
+      return [...parentEl.children].filter(el => el.tagName === 'RoomData').map(node => {
+        const id = node.querySelector(':scope > Id')?.textContent || ('r_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5));
+        const name = node.querySelector(':scope > Name')?.textContent || 'Oda';
+        const note = node.querySelector(':scope > Note')?.textContent || '';
+        const items = {};
+        const serials = {};
+        const itemNames = {};
+        node.querySelectorAll('RoomProductEntry').forEach(entry => {
+          const pid = entry.querySelector('ProductId')?.textContent;
+          const pName = entry.querySelector('ProductName')?.textContent || '';
+          const qty = parseInt(entry.querySelector('Quantity')?.textContent || '0', 10);
+          if (pid) {
+            items[pid] = qty;
+            if (pName) itemNames[pid] = pName;
+            serials[pid] = [...entry.querySelectorAll('SerialRecord')].map(srNode => ({
+              id: srNode.querySelector('Id')?.textContent || ('sr_' + Math.random()),
+              serialNo: srNode.querySelector('SerialNo')?.textContent || '',
+              status: srNode.querySelector('Status')?.textContent || ''
+            }));
+          }
+        });
+        return { id, name, note, items, serials, itemNames };
+      });
+    }
+
     async function exportPCXml() {
+      syncActivePageRooms();
       let xml = `<?xml version="1.0" encoding="utf-8"?>\n<InventoryStore xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">\n`;
       xml += `  <ViewMode>${escapeHtml(state.viewMode)}</ViewMode>\n`;
       xml += `  <DarkMode>${state.darkMode ? 'true' : 'false'}</DarkMode>\n`;
       xml += `  <Language>${escapeHtml(state.language)}</Language>\n`;
       xml += `  <ColorTheme>${state.colorTheme}</ColorTheme>\n`;
+      xml += `  <ActivePageId>${escapeHtml(state.activePageId)}</ActivePageId>\n`;
       xml += `  <Products>\n`;
       state.products.forEach(p => {
         const rawBase64 = p.photo && p.photo.includes(',') ? p.photo.split(',')[1] : (p.photo || '');
@@ -2743,19 +3420,14 @@
         xml += `    </ProductItem>\n`;
       });
       xml += `  </Products>\n  <Rooms>\n`;
-      state.rooms.forEach(r => {
-        xml += `    <RoomData>\n      <Id>${escapeHtml(r.id)}</Id>\n      <Name>${escapeHtml(r.name)}</Name>\n      <Note>${escapeHtml(r.note || '')}</Note>\n      <Items>\n`;
-        Object.keys(r.items || {}).forEach(pid => {
-          const serials = getRoomProductSerials(r, pid);
-          xml += `        <RoomProductEntry>\n          <ProductId>${escapeHtml(pid)}</ProductId>\n          <Quantity>${Number(r.items[pid]) || 0}</Quantity>\n          <Serials>\n`;
-          serials.forEach(sr => {
-            xml += `            <SerialRecord>\n              <Id>${escapeHtml(sr.id)}</Id>\n              <SerialNo>${escapeHtml(sr.serialNo)}</SerialNo>\n              <Status>${escapeHtml(sr.status)}</Status>\n            </SerialRecord>\n`;
-          });
-          xml += `          </Serials>\n        </RoomProductEntry>\n`;
-        });
-        xml += `      </Items>\n    </RoomData>\n`;
+      xml += serializeRoomsXml(state.rooms, '    ');
+      xml += `  </Rooms>\n  <Pages>\n`;
+      (state.pages || []).forEach(pg => {
+        xml += `    <InventoryPage>\n      <Id>${escapeHtml(pg.id)}</Id>\n      <Name>${escapeHtml(pg.name)}</Name>\n      <MonthKey>${escapeHtml(pg.monthKey || '')}</MonthKey>\n      <CreatedAt>${escapeHtml(pg.createdAt || '')}</CreatedAt>\n      <Rooms>\n`;
+        xml += serializeRoomsXml(pg.rooms, '        ');
+        xml += `      </Rooms>\n    </InventoryPage>\n`;
       });
-      xml += `  </Rooms>\n</InventoryStore>`;
+      xml += `  </Pages>\n</InventoryStore>`;
 
       const blob = new Blob([xml], { type: 'application/xml;charset=utf-8;' });
       closeSettingsModal();
@@ -2772,37 +3444,38 @@
           if (text.startsWith('<')) {
             const parser = new DOMParser();
             const doc = parser.parseFromString(text, 'application/xml');
+            const root = doc.documentElement;
             const products = [...doc.querySelectorAll('ProductItem')].map(node => {
               const id = node.querySelector('Id')?.textContent || ('p_' + Date.now());
               const name = node.querySelector('Name')?.textContent || 'Ürün';
               const b64 = node.querySelector('PhotoBase64')?.textContent || '';
               return { id, name, photo: b64 ? (b64.startsWith('data:') ? b64 : `data:image/jpeg;base64,${b64}`) : null };
             });
-            const rooms = [...doc.querySelectorAll('RoomData')].map(node => {
-              const id = node.querySelector('Id')?.textContent || ('r_' + Date.now());
-              const name = node.querySelector('Name')?.textContent || 'Oda';
-              const note = node.querySelector('Note')?.textContent || '';
-              const items = {};
-              const serials = {};
-              node.querySelectorAll('RoomProductEntry').forEach(entry => {
-                const pid = entry.querySelector('ProductId')?.textContent;
-                const qty = parseInt(entry.querySelector('Quantity')?.textContent || '0', 10);
-                if (pid) {
-                  items[pid] = qty;
-                  serials[pid] = [...entry.querySelectorAll('SerialRecord')].map(srNode => ({
-                    id: srNode.querySelector('Id')?.textContent || ('sr_' + Math.random()),
-                    serialNo: srNode.querySelector('SerialNo')?.textContent || '',
-                    status: srNode.querySelector('Status')?.textContent || ''
-                  }));
-                }
-              });
-              return { id, name, note, items, serials };
-            });
+
+            const pagesContainer = root.querySelector(':scope > Pages');
+            const pages = pagesContainer
+              ? [...pagesContainer.querySelectorAll(':scope > InventoryPage')].map(pgNode => {
+                  const id = pgNode.querySelector(':scope > Id')?.textContent || ('page_' + Date.now());
+                  const name = pgNode.querySelector(':scope > Name')?.textContent || 'Sayfa';
+                  const monthKey = pgNode.querySelector(':scope > MonthKey')?.textContent || '';
+                  const createdAt = pgNode.querySelector(':scope > CreatedAt')?.textContent || new Date().toISOString();
+                  const pgRoomsEl = pgNode.querySelector(':scope > Rooms');
+                  return { id, name, monthKey, createdAt, rooms: pgRoomsEl ? parseRoomNodesXml(pgRoomsEl) : [] };
+                })
+              : [];
+
+            const rootRoomsEl = root.querySelector(':scope > Rooms');
+            const rootRooms = rootRoomsEl ? parseRoomNodesXml(rootRoomsEl) : [];
+
             state.products = products;
-            state.rooms = rooms;
+            state.pages = pages;
+            state.rooms = rootRooms;
+            state.activePageId = root.querySelector(':scope > ActivePageId')?.textContent || '';
+            ensureCurrentMonthPage(true);
           } else {
             const parsed = JSON.parse(text);
             state = { ...state, ...parsed };
+            ensureCurrentMonthPage(true);
           }
           state.currentRoomId = state.rooms[0]?.id || null;
           await saveState();
@@ -2825,7 +3498,10 @@
     async function resetAllData() {
       if (!confirm(T('TÜM VERİLERİ SİLMEK İSTEDİĞİNİZE EMİN MİSİNİZ?', 'DELETE ALL DATA?'))) return;
       state.rooms = [];
+      state.pages = [];
       state.products = [];
+      state.activePageId = '';
+      ensureCurrentMonthPage(true);
       state.currentRoomId = null;
       await saveState();
       closeSettingsModal();
@@ -2855,6 +3531,13 @@
       if (!loaded) {
         applyInitialSeedData();
         await saveState();
+      } else {
+        const prevPageCount = (state.pages || []).length;
+        ensureCurrentMonthPage(true);
+        state.currentRoomId = state.rooms[0]?.id || null;
+        if ((state.pages || []).length !== prevPageCount) {
+          await saveState();
+        }
       }
       renderAll();
     })();

@@ -110,6 +110,51 @@ namespace EnvanterSayimApp
             File.WriteAllText(filePath, sb.ToString(), new UTF8Encoding(true));
         }
 
+        // =====================================================================
+        // 1C. AYLIK KARŞILAŞTIRMA RAPORU .XLSX EXPORT
+        // =====================================================================
+        public static void ExportComparisonToXlsx(InventoryStore store, string page1Label, string page2Label, List<ComparisonRow> items, string filePath)
+        {
+            bool isEn = store.Language == "en";
+            string sheetName = isEn ? "Comparison" : "Karsilastirma";
+            var rows = new List<List<object>>
+            {
+                new List<object>
+                {
+                    isEn ? "Product Name" : "Ürün Adı",
+                    isEn ? $"{page1Label} Qty" : $"{page1Label} Miktarı",
+                    isEn ? $"{page2Label} Qty" : $"{page2Label} Miktarı",
+                    isEn ? "Diff (+/-)" : "Fark (+/-)",
+                    isEn ? "Status" : "Durum"
+                }
+            };
+
+            foreach (var it in items)
+            {
+                string diffText = it.Diff > 0 ? "+" + it.Diff : it.Diff.ToString();
+                rows.Add(new List<object>
+                {
+                    AppHelper.LocalizeText(it.ProductName, isEn),
+                    it.Qty1,
+                    it.Qty2,
+                    diffText,
+                    AppHelper.GetComparisonStatusLabel(it.StatusCode, isEn)
+                });
+            }
+
+            if (File.Exists(filePath)) File.Delete(filePath);
+            using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+            using (var zip = new ZipArchive(fs, ZipArchiveMode.Create))
+            {
+                WriteZipText(zip, "[Content_Types].xml", BuildSingleSheetContentTypesXml());
+                WriteZipText(zip, "_rels/.rels", BuildRootRelsXml());
+                WriteZipText(zip, "xl/workbook.xml", BuildSingleSheetWorkbookXml(sheetName));
+                WriteZipText(zip, "xl/_rels/workbook.xml.rels", BuildSingleSheetWorkbookRelsXml());
+                WriteZipText(zip, "xl/styles.xml", BuildStylesXml());
+                WriteZipText(zip, "xl/worksheets/sheet1.xml", BuildWorksheetXml(rows, new[] { 30.0, 24.0, 24.0, 14.0, 16.0 }, 20.0));
+            }
+        }
+
         private static List<List<object>> BuildLaptopSheetRows(InventoryStore store, RoomData filterRoom, ProductItem filterProduct)
         {
             bool isEn = store.Language == "en";
