@@ -817,6 +817,7 @@ namespace EnvanterSayimApp
         // UI Controls
         private Panel topBar;
         private Label lblTopLeftSettings; // KUTUCUKSIZ SADECE YAZI AYARLAR TUŞU
+        private Label lblLogoDivider;
         private Label lblLogo;
         private Button btnTabRooms;
         private Button btnTabCatalog;
@@ -932,10 +933,10 @@ namespace EnvanterSayimApp
             topBar.Controls.Add(lblTopLeftSettings);
 
             // Divider line between Settings text and Logo
-            Label lblLogoDivider = new Label
+            lblLogoDivider = new Label
             {
                 Text = "|",
-                Location = new Point(102, 19),
+                Location = new Point(88, 19),
                 AutoSize = true,
                 Font = new Font("Segoe UI", 11f, FontStyle.Regular),
                 ForeColor = Color.Gray
@@ -946,29 +947,30 @@ namespace EnvanterSayimApp
             lblLogo = new Label
             {
                 Text = "Envanter Sayım",
-                Font = new Font("Segoe UI", 13f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 12f, FontStyle.Bold),
                 AutoSize = true,
-                Location = new Point(122, 18)
+                Location = new Point(108, 19)
             };
             topBar.Controls.Add(lblLogo);
 
-            // Center Tabs
-            btnTabRooms = CreateTabButton("", 265, 112);
+            // Center Tabs (positions calculated dynamically in LayoutTopBar so they never overlap under any DPI/language)
+            btnTabRooms = CreateTabButton("", 280, 102);
             btnTabRooms.Click += (s, e) => SwitchTab("rooms");
 
-            btnTabCatalog = CreateTabButton("", 383, 116);
+            btnTabCatalog = CreateTabButton("", 388, 114);
             btnTabCatalog.Click += (s, e) => SwitchTab("catalog");
 
-            btnTabSummary = CreateTabButton("", 505, 112);
+            btnTabSummary = CreateTabButton("", 508, 102);
             btnTabSummary.Click += (s, e) => SwitchTab("summary");
 
-            btnTabCompare = CreateTabButton("", 623, 148);
+            btnTabCompare = CreateTabButton("", 616, 146);
             btnTabCompare.Click += (s, e) => SwitchTab("compare");
 
             topBar.Controls.Add(btnTabRooms);
             topBar.Controls.Add(btnTabCatalog);
             topBar.Controls.Add(btnTabSummary);
             topBar.Controls.Add(btnTabCompare);
+            topBar.Resize += (s, e) => LayoutTopBar();
 
             // Right Actions: Laptop Excel + General Excel Import & Export
             FlowLayoutPanel rightActions = new FlowLayoutPanel
@@ -1039,7 +1041,7 @@ namespace EnvanterSayimApp
                 Text = "",
                 Dock = DockStyle.Left,
                 AutoSize = false,
-                Width = 112,
+                Width = 128,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = new Font("Segoe UI", 8.5f, FontStyle.Bold)
             };
@@ -1904,11 +1906,28 @@ namespace EnvanterSayimApp
 
             mainCardsPanel.BackColor = ColBg;
 
+            LayoutTopBar();
+
             topBar.Invalidate();
             pageBar.Invalidate();
             sidebarPanel.Invalidate();
             contentHeaderPanel.Invalidate();
             compareTopBar.Invalidate();
+        }
+
+        private void LayoutTopBar()
+        {
+            if (topBar == null || lblTopLeftSettings == null || lblLogoDivider == null || lblLogo == null) return;
+            lblTopLeftSettings.Location = new Point(16, (topBar.Height - lblTopLeftSettings.Height) / 2);
+            lblLogoDivider.Location = new Point(lblTopLeftSettings.Right + 10, (topBar.Height - lblLogoDivider.Height) / 2);
+            lblLogo.Location = new Point(lblLogoDivider.Right + 10, (topBar.Height - lblLogo.Height) / 2);
+
+            int x = lblLogo.Right + 22;
+            int y = (topBar.Height - btnTabRooms.Height) / 2;
+            btnTabRooms.Location = new Point(x, y); x += btnTabRooms.Width + 6;
+            btnTabCatalog.Location = new Point(x, y); x += btnTabCatalog.Width + 6;
+            btnTabSummary.Location = new Point(x, y); x += btnTabSummary.Width + 6;
+            btnTabCompare.Location = new Point(x, y);
         }
 
         private void LayoutContentHeader()
